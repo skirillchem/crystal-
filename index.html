@@ -1,0 +1,1559 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Кристаллы · интерактивные 3D-решётки</title>
+<style>
+  :root{
+    --ink:#0f2233;
+    --muted:#5b7186;
+    --line:#dbe6ee;
+    --accent:#0d7d74;
+  }
+
+  *,*::before,*::after{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;min-height:100vh;
+    font-family:"Segoe UI",system-ui,-apple-system,"Inter","Helvetica Neue",Arial,sans-serif;
+    color:var(--ink);line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    background:
+      radial-gradient(1100px 560px at 6% -12%, #d6efe9 0%, rgba(214,239,233,0) 62%),
+      radial-gradient(900px 520px at 103% -8%, #e3e8fb 0%, rgba(227,232,251,0) 58%),
+      #eef4f8;
+    background-attachment:fixed;
+  }
+  [hidden]{display:none !important}
+  .wrap{max-width:1180px;margin:0 auto;padding:26px 20px 56px}
+
+  .brand{display:flex;align-items:center;gap:13px;margin:0 0 18px}
+  .brand-icon{
+    width:44px;height:44px;border-radius:13px;flex:0 0 auto;
+    background:linear-gradient(145deg,#12978b,#0a5f59);
+    display:grid;place-items:center;
+    box-shadow:0 8px 18px -6px rgba(10,95,89,.55);
+  }
+  .brand-icon svg{width:24px;height:24px;fill:none;stroke:#fff;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .brand h1{margin:0;font-size:15px;font-weight:700}
+  .brand p{margin:1px 0 0;font-size:12.5px;color:var(--muted)}
+
+  .card{
+    background:rgba(255,255,255,.94);
+    border:1px solid var(--line);
+    border-radius:20px;
+    box-shadow:0 22px 55px -34px rgba(15,52,74,.45);
+  }
+
+  /* ---------- поиск ---------- */
+  .search-card{position:relative;padding:22px 24px 16px;margin-bottom:18px;z-index:5}
+  .search-head h2{margin:0 0 3px;font-size:21px;letter-spacing:-.02em}
+  .search-head p{margin:0 0 14px;font-size:12.5px;color:var(--muted)}
+
+  .search-row{display:flex;gap:9px;position:relative;flex-wrap:wrap}
+  .input-wrap{position:relative;flex:1;min-width:220px}
+  .input-icon{
+    position:absolute;left:15px;top:50%;transform:translateY(-50%);
+    width:18px;height:18px;stroke:#8aa0b1;fill:none;stroke-width:2;stroke-linecap:round;
+    pointer-events:none;
+  }
+  #query{
+    width:100%;height:50px;padding:0 16px 0 44px;
+    border:1.5px solid #d7e4ec;border-radius:12px;
+    background:#fbfdfe;font:inherit;font-size:15px;color:var(--ink);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  #query::placeholder{color:#9aaebd}
+  #query:focus{
+    outline:none;border-color:var(--accent);
+    box-shadow:0 0 0 4px rgba(13,125,116,.12);background:#fff;
+  }
+  .btn{
+    appearance:none;border:0;cursor:pointer;font:inherit;font-weight:600;
+    border-radius:12px;padding:0 22px;height:50px;font-size:14.5px;
+    background:linear-gradient(180deg,#119186,#0d7d74);color:#fff;
+    box-shadow:0 12px 24px -14px rgba(13,125,116,.9);
+    white-space:nowrap;
+  }
+  .btn:hover{filter:brightness(1.06)}
+  .btn:active{transform:translateY(1px)}
+  .btn:focus-visible{outline:3px solid #7fd3c9;outline-offset:2px}
+  .btn-ghost{
+    background:#fff;color:var(--accent);border:1px solid #bcded8;box-shadow:none;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 16px;
+  }
+  .btn-ghost:hover{background:#f2fbf9;filter:none}
+  .btn-ghost .count{
+    font-size:11px;font-weight:700;color:#0a6b63;background:#e8f6f3;
+    border-radius:999px;padding:1px 7px;
+  }
+
+  .suggest{
+    position:absolute;left:0;right:0;top:calc(100% + 6px);
+    background:#fff;border:1px solid #d7e4ec;border-radius:12px;
+    box-shadow:0 18px 40px -16px rgba(15,52,74,.35);
+    padding:5px;max-height:300px;overflow:auto;z-index:20;
+  }
+  .sug{
+    display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+    width:100%;padding:9px 12px;border:0;border-radius:8px;
+    background:none;font:inherit;text-align:left;cursor:pointer;color:var(--ink);
+  }
+  .sug:hover{background:#eef9f6}
+  .sug-name{font-size:13.5px}
+  .sug-formula{font-size:11.5px;color:#8aa0b1;font-variant-numeric:tabular-nums}
+
+  .quick{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .quick button{
+    appearance:none;font:inherit;font-size:12px;color:#3d5a6e;
+    background:#f3f8fb;border:1px solid #dbe8f0;border-radius:999px;
+    padding:5px 12px;cursor:pointer;
+  }
+  .quick button:hover{background:#e9f7f4;border-color:#a9d9d0}
+
+  .search-error{
+    margin-top:10px;padding:10px 14px;border-radius:11px;
+    background:#fdf7ec;border:1px solid #f0dcb8;color:#7c5a20;
+    font-size:12.5px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+  }
+  .search-error button{
+    appearance:none;font:inherit;font-size:12px;font-weight:600;
+    color:#8a5b00;background:#fff;border:1px solid #e8c98d;border-radius:7px;
+    padding:3px 9px;cursor:pointer;
+  }
+
+  /* ---------- раскладка ---------- */
+  .layout{display:grid;grid-template-columns:minmax(0,1.15fr) 320px;gap:18px;align-items:start}
+
+  /* ---------- просмотрщик ---------- */
+  .viewer-card{padding:16px}
+  .viewer-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:2px 4px 12px}
+  .viewer-top h2{margin:0;font-size:22px;letter-spacing:-.02em}
+  .mol-meta{margin-top:2px;font-size:12.5px;color:var(--muted)}
+  .mol-meta b{color:#3d5a6e;font-weight:600}
+  .badge{
+    flex:0 0 auto;font-size:11.5px;font-weight:600;color:#0a6b63;
+    background:#e8f6f3;border:1px solid #cdeae3;border-radius:999px;
+    padding:5px 11px;white-space:nowrap;
+  }
+  .canvas-wrap{
+    position:relative;border-radius:16px;overflow:hidden;
+    background:radial-gradient(circle at 50% 42%, #16344a 0%, #0d2334 46%, #081521 100%);
+    box-shadow:inset 0 0 60px rgba(0,0,0,.45);
+  }
+  #scene{width:100%;height:560px;display:block;touch-action:none;cursor:grab}
+  #scene:active{cursor:grabbing}
+
+  .tools{position:absolute;top:12px;right:12px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .tools button{
+    width:36px;height:36px;border-radius:10px;
+    border:1px solid rgba(255,255,255,.16);
+    background:rgba(8,22,34,.55);color:#cfe2ee;
+    font:inherit;font-size:14px;cursor:pointer;
+    backdrop-filter:blur(6px);
+  }
+  .tools button:hover{background:rgba(20,45,64,.8)}
+  .tools button.active{background:rgba(13,125,116,.85);border-color:rgba(120,220,205,.45);color:#fff}
+  .tools button:focus-visible{outline:2px solid #7fd3c9;outline-offset:2px}
+
+  .zoom{position:absolute;right:12px;bottom:12px;display:flex;flex-direction:column;gap:5px}
+  .zoom button{
+    width:32px;height:32px;border-radius:9px;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(8,22,34,.55);color:#cfe2ee;
+    font:inherit;font-size:16px;line-height:1;cursor:pointer;
+  }
+  .zoom button:hover{background:rgba(20,45,64,.8)}
+
+  .hint-overlay{
+    position:absolute;left:14px;bottom:14px;
+    font-size:11.5px;color:#9db9ca;background:rgba(8,22,34,.5);
+    border:1px solid rgba(255,255,255,.1);border-radius:8px;
+    padding:5px 10px;pointer-events:none;transition:opacity .4s;
+  }
+  .hint-overlay.gone{opacity:0}
+
+  .viewer-foot{padding:11px 4px 2px;font-size:13px;color:var(--muted);line-height:1.45;min-height:40px}
+
+  /* ---------- боковая панель ---------- */
+  .side-card{padding:20px}
+  .side-card h3{
+    font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;
+    color:var(--muted);margin:0 0 8px;font-weight:700;
+  }
+  .side-block{margin-bottom:17px}
+  .side-block:last-child{margin-bottom:0}
+
+  .cell-grid{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:3px 10px;font-size:12.5px}
+  .cell-grid span{color:var(--muted)}
+  .cell-grid b{font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+
+  .plane-row{display:flex;gap:8px;margin-bottom:8px}
+  .plane-row label{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
+  .plane-row input{
+    width:46px;height:32px;border:1px solid #d7e4ec;border-radius:8px;
+    font:inherit;font-size:13px;text-align:center;background:#fbfdfe;color:var(--ink);
+  }
+  .plane-row input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(13,125,116,.12)}
+  .plane-btn{
+    width:100%;height:36px;border-radius:9px;border:1px solid #bcded8;
+    background:#fff;color:var(--accent);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
+  }
+  .plane-btn:hover{background:#f2fbf9}
+  .plane-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .plane-d{margin-top:6px;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+  .supercell{display:flex;gap:6px}
+  .supercell button{
+    flex:1;height:32px;border-radius:8px;border:1px solid #d7e4ec;
+    background:#fff;color:#3d5a6e;font:inherit;font-size:12px;cursor:pointer;
+  }
+  .supercell button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+  .facts{display:grid;gap:5px;font-size:12.5px}
+  .fact{display:flex;justify-content:space-between;gap:10px}
+  .fact span{color:var(--muted)}
+  .fact b{font-weight:600;text-align:right;color:var(--ink)}
+
+  .comp{display:flex;flex-wrap:wrap;gap:6px}
+  .el{
+    display:inline-flex;align-items:center;gap:6px;
+    background:#f4f8fb;border:1px solid var(--line);border-radius:999px;
+    padding:4px 10px;font-size:11.5px;color:#3d5a6e;
+  }
+  .el i{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  .el b{font-weight:700;color:var(--ink)}
+  .note-small{font-size:11px;color:#8aa0b1;margin:8px 0 0;line-height:1.4}
+
+  /* ---------- каталог ---------- */
+  .modal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:24px}
+  .modal-backdrop{position:absolute;inset:0;background:rgba(8,22,34,.55);backdrop-filter:blur(4px)}
+  .modal-panel{
+    position:relative;width:min(980px,100%);max-height:min(88vh,820px);
+    display:flex;flex-direction:column;overflow:hidden;
+    background:#fff;border:1px solid var(--line);border-radius:20px;
+    box-shadow:0 44px 100px -34px rgba(4,20,32,.65);
+  }
+  .modal-head{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+    padding:18px 22px 12px;border-bottom:1px solid #edf3f7;
+  }
+  .modal-head h2{margin:0;font-size:20px;letter-spacing:-.02em}
+  .modal-head p{margin:2px 0 0;font-size:12px;color:var(--muted)}
+  .modal-close{
+    width:36px;height:36px;flex:0 0 auto;border-radius:10px;
+    border:1px solid #d7e4ec;background:#fff;color:#48657a;
+    font:inherit;font-size:20px;line-height:1;cursor:pointer;
+  }
+  .modal-close:hover{background:#f3f9fb}
+
+  .filter-group{padding:10px 22px;border-bottom:1px solid #edf3f7}
+  .filter-group:last-of-type{background:#fbfdfe}
+  .filter-label{
+    display:block;font-size:10px;text-transform:uppercase;letter-spacing:.09em;
+    font-weight:700;color:var(--muted);margin-bottom:6px;
+  }
+  .filters{display:flex;flex-wrap:wrap;gap:6px}
+  .filter{
+    appearance:none;font:inherit;font-size:12px;color:#3d5a6e;
+    background:#fff;border:1px solid #dbe8f0;border-radius:999px;
+    padding:5px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  }
+  .filter:hover{border-color:#a9d9d0;background:#f4fbf9}
+  .filter span{
+    font-size:10.5px;font-weight:700;color:#7c93a4;
+    background:#f0f5f8;border-radius:999px;padding:1px 6px;
+  }
+  .filter.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .filter.active span{background:rgba(255,255,255,.22);color:#fff}
+
+  .catalog-grid{
+    flex:1;min-height:0;overflow-y:auto;
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+    gap:8px;padding:14px 22px 20px;align-content:start;
+  }
+  .cat-card{
+    appearance:none;text-align:left;font:inherit;cursor:pointer;
+    background:#fbfdfe;border:1px solid #e0eaf1;border-radius:11px;
+    padding:9px 12px;display:flex;flex-direction:column;gap:2px;
+  }
+  .cat-card:hover{border-color:#8ecfc5;background:#f4fbf9}
+  .cat-card.is-current{border-color:var(--accent);background:#eef9f6}
+  .cat-name{font-size:13px;color:var(--ink);line-height:1.3}
+  .cat-formula{font-size:11px;color:#8aa0b1;font-variant-numeric:tabular-nums}
+
+  @media (max-width:960px){
+    .layout{grid-template-columns:1fr}
+    #scene{height:460px}
+  }
+  @media (max-width:640px){
+    .wrap{padding:16px 12px 40px}
+    .search-card{padding:16px}
+    .search-head h2{font-size:18px}
+    .search-row .btn{height:44px;flex:1}
+    .search-row .btn-ghost{flex:0 0 auto}
+    #query{height:46px}
+    #scene{height:400px}
+    .viewer-card{padding:12px}
+    .viewer-top h2{font-size:19px}
+    .modal{padding:10px}
+    .modal-panel{max-height:94vh;border-radius:16px}
+    .catalog-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));padding:12px 16px 16px}
+    .filter-group{padding:10px 16px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="brand">
+    <div class="brand-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <path d="M12 3l7 4v10l-7 4-7-4V7l7-4z"/>
+        <path d="M5 7l7 4 7-4M12 11v10"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Кристаллы</h1>
+      <p>Интерактивные 3D-решётки: ячейка, углы, плоскости</p>
+    </div>
+  </header>
+
+  <section class="card search-card">
+    <div class="search-head">
+      <h2>Введите название вещества</h2>
+      <p>По-русски или формулой: хлорид натрия, алмаз, медь, nacl, tio2…</p>
+    </div>
+
+    <form class="search-row" id="searchForm" autocomplete="off">
+      <div class="input-wrap">
+        <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+        </svg>
+        <input id="query" type="text" placeholder="Например: флюорит" aria-label="Название вещества" spellcheck="false">
+        <div class="suggest" id="suggest" hidden></div>
+      </div>
+      <button class="btn" type="submit">Показать</button>
+      <button class="btn btn-ghost" id="openCatalog" type="button">Каталог <span class="count" id="catalogBtnCount">200</span></button>
+    </form>
+
+    <div class="quick" id="quick"></div>
+
+    <div class="search-error" id="searchError" hidden>
+      <span id="errText"></span>
+      <span id="errSugs" style="display:inline-flex;gap:6px;flex-wrap:wrap"></span>
+    </div>
+  </section>
+
+  <div class="layout">
+    <section class="card viewer-card">
+      <div class="viewer-top">
+        <div>
+          <h2 id="crystalName">—</h2>
+          <div class="mol-meta"><b id="crystalFormula">—</b> · <span id="crystalType">—</span></div>
+        </div>
+        <span class="badge" id="cellBadge">—</span>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="scene" role="img" aria-label="Трёхмерная модель кристаллической решётки"></canvas>
+        <div class="tools">
+          <button id="btnCell" class="active" type="button" title="Показать ячейку">□</button>
+          <button id="btnContacts" type="button" title="Контакты между атомами">⋯</button>
+          <button id="btnAngles" type="button" title="Углы ячейки">∠</button>
+          <button id="btnLabels" type="button" title="Подписи атомов">Aa</button>
+          <button id="btnReset" type="button" title="Сбросить ракурс">⟲</button>
+        </div>
+        <div class="zoom">
+          <button id="btnZoomIn" type="button" title="Приблизить">+</button>
+          <button id="btnZoomOut" type="button" title="Отдалить">−</button>
+        </div>
+        <div class="hint-overlay" id="hintOverlay">Потяните, чтобы вращать</div>
+      </div>
+
+      <div class="viewer-foot" id="crystalDesc"></div>
+    </section>
+
+    <aside class="card side-card">
+      <div class="side-block">
+        <h3>Параметры ячейки</h3>
+        <div class="cell-grid" id="cellGrid"></div>
+      </div>
+
+      <div class="side-block">
+        <h3>Плоскость (hkl)</h3>
+        <div class="plane-row">
+          <label>h <input id="hIdx" type="number" min="0" max="3" step="1" value="1"></label>
+          <label>k <input id="kIdx" type="number" min="0" max="3" step="1" value="1"></label>
+          <label>l <input id="lIdx" type="number" min="0" max="3" step="1" value="1"></label>
+        </div>
+        <button class="plane-btn" id="btnPlane" type="button">Показать плоскость</button>
+        <div class="plane-d" id="planeD">d = —</div>
+      </div>
+
+      <div class="side-block">
+        <h3>Структура</h3>
+        <div class="facts" id="facts"></div>
+      </div>
+
+      <div class="side-block">
+        <h3>Суперячейка</h3>
+        <div class="supercell" id="supercell">
+          <button type="button" data-n="1" class="active">1×1×1</button>
+          <button type="button" data-n="2">2×2×2</button>
+        </div>
+      </div>
+
+      <div class="side-block">
+        <h3>Атомы в ячейке</h3>
+        <div class="comp" id="composition"></div>
+      </div>
+
+      <p class="note-small">Учебная модель: параметры ячеек округлены, структуры упрощены.</p>
+    </aside>
+  </div>
+</div>
+
+<div class="modal" id="catalogModal" hidden>
+  <div class="modal-backdrop"></div>
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="catalogTitle">
+    <div class="modal-head">
+      <div>
+        <h2 id="catalogTitle">Каталог кристаллов</h2>
+        <p id="catalogCount">200 веществ</p>
+      </div>
+      <button class="modal-close" id="closeCatalog" type="button" aria-label="Закрыть каталог">×</button>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Тип решётки</span>
+      <div class="filters" id="typeFilters"></div>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Сингония</span>
+      <div class="filters" id="systemFilters"></div>
+    </div>
+    <div class="catalog-grid" id="catalogGrid"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ================================================================ */
+  /*  Данные                                                          */
+  /* ================================================================ */
+
+  const CRYSTALS = [{"name":"Фторид лития","formula":"LiF","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.119,"b":4.119,"c":4.119,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Li","x":0,"y":0,"z":0},{"e":"Li","x":0,"y":0.5,"z":0.5},{"e":"Li","x":0.5,"y":0,"z":0.5},{"e":"Li","x":0.5,"y":0.5,"z":0},{"e":"F","x":0.5,"y":0,"z":0},{"e":"F","x":0,"y":0.5,"z":0},{"e":"F","x":0,"y":0,"z":0.5},{"e":"F","x":0.5,"y":0.5,"z":0.5}]},{"name":"Хлорид лития","formula":"LiCl","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":5.114,"b":5.114,"c":5.114,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Li","x":0,"y":0,"z":0},{"e":"Li","x":0,"y":0.5,"z":0.5},{"e":"Li","x":0.5,"y":0,"z":0.5},{"e":"Li","x":0.5,"y":0.5,"z":0},{"e":"Cl","x":0.5,"y":0,"z":0},{"e":"Cl","x":0,"y":0.5,"z":0},{"e":"Cl","x":0,"y":0,"z":0.5},{"e":"Cl","x":0.5,"y":0.5,"z":0.5}]},{"name":"Бромид лития","formula":"LiBr","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":5.413,"b":5.413,"c":5.413,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Li","x":0,"y":0,"z":0},{"e":"Li","x":0,"y":0.5,"z":0.5},{"e":"Li","x":0.5,"y":0,"z":0.5},{"e":"Li","x":0.5,"y":0.5,"z":0},{"e":"Br","x":0.5,"y":0,"z":0},{"e":"Br","x":0,"y":0.5,"z":0},{"e":"Br","x":0,"y":0,"z":0.5},{"e":"Br","x":0.5,"y":0.5,"z":0.5}]},{"name":"Иодид лития","formula":"LiI","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":5.89,"b":5.89,"c":5.89,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Li","x":0,"y":0,"z":0},{"e":"Li","x":0,"y":0.5,"z":0.5},{"e":"Li","x":0.5,"y":0,"z":0.5},{"e":"Li","x":0.5,"y":0.5,"z":0},{"e":"I","x":0.5,"y":0,"z":0},{"e":"I","x":0,"y":0.5,"z":0},{"e":"I","x":0,"y":0,"z":0.5},{"e":"I","x":0.5,"y":0.5,"z":0.5}]},{"name":"Фторид натрия","formula":"NaF","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.637,"b":4.637,"c":4.637,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Na","x":0,"y":0,"z":0},{"e":"Na","x":0,"y":0.5,"z":0.5},{"e":"Na","x":0.5,"y":0,"z":0.5},{"e":"Na","x":0.5,"y":0.5,"z":0},{"e":"F","x":0.5,"y":0,"z":0},{"e":"F","x":0,"y":0.5,"z":0},{"e":"F","x":0,"y":0,"z":0.5},{"e":"F","x":0.5,"y":0.5,"z":0.5}]},{"name":"Хлорид натрия","formula":"NaCl","aliases":["галит","поваренная соль"],"type":"ionic","system":"cubic","family":"тип NaCl","a":5.632,"b":5.632,"c":5.632,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Na","x":0,"y":0,"z":0},{"e":"Na","x":0,"y":0.5,"z":0.5},{"e":"Na","x":0.5,"y":0,"z":0.5},{"e":"Na","x":0.5,"y":0.5,"z":0},{"e":"Cl","x":0.5,"y":0,"z":0},{"e":"Cl","x":0,"y":0.5,"z":0},{"e":"Cl","x":0,"y":0,"z":0.5},{"e":"Cl","x":0.5,"y":0.5,"z":0.5}]},{"name":"Бромид натрия","formula":"NaBr","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":5.93,"b":5.93,"c":5.93,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Na","x":0,"y":0,"z":0},{"e":"Na","x":0,"y":0.5,"z":0.5},{"e":"Na","x":0.5,"y":0,"z":0.5},{"e":"Na","x":0.5,"y":0.5,"z":0},{"e":"Br","x":0.5,"y":0,"z":0},{"e":"Br","x":0,"y":0.5,"z":0},{"e":"Br","x":0,"y":0,"z":0.5},{"e":"Br","x":0.5,"y":0.5,"z":0.5}]},{"name":"Иодид натрия","formula":"NaI","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":6.408,"b":6.408,"c":6.408,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Na","x":0,"y":0,"z":0},{"e":"Na","x":0,"y":0.5,"z":0.5},{"e":"Na","x":0.5,"y":0,"z":0.5},{"e":"Na","x":0.5,"y":0.5,"z":0},{"e":"I","x":0.5,"y":0,"z":0},{"e":"I","x":0,"y":0.5,"z":0},{"e":"I","x":0,"y":0,"z":0.5},{"e":"I","x":0.5,"y":0.5,"z":0.5}]},{"name":"Фторид калия","formula":"KF","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":5.353,"b":5.353,"c":5.353,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"K","x":0,"y":0,"z":0},{"e":"K","x":0,"y":0.5,"z":0.5},{"e":"K","x":0.5,"y":0,"z":0.5},{"e":"K","x":0.5,"y":0.5,"z":0},{"e":"F","x":0.5,"y":0,"z":0},{"e":"F","x":0,"y":0.5,"z":0},{"e":"F","x":0,"y":0,"z":0.5},{"e":"F","x":0.5,"y":0.5,"z":0.5}]},{"name":"Хлорид калия","formula":"KCl","aliases":["сильвин"],"type":"ionic","system":"cubic","family":"тип NaCl","a":6.348,"b":6.348,"c":6.348,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"K","x":0,"y":0,"z":0},{"e":"K","x":0,"y":0.5,"z":0.5},{"e":"K","x":0.5,"y":0,"z":0.5},{"e":"K","x":0.5,"y":0.5,"z":0},{"e":"Cl","x":0.5,"y":0,"z":0},{"e":"Cl","x":0,"y":0.5,"z":0},{"e":"Cl","x":0,"y":0,"z":0.5},{"e":"Cl","x":0.5,"y":0.5,"z":0.5}]},{"name":"Бромид калия","formula":"KBr","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":6.647,"b":6.647,"c":6.647,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"K","x":0,"y":0,"z":0},{"e":"K","x":0,"y":0.5,"z":0.5},{"e":"K","x":0.5,"y":0,"z":0.5},{"e":"K","x":0.5,"y":0.5,"z":0},{"e":"Br","x":0.5,"y":0,"z":0},{"e":"Br","x":0,"y":0.5,"z":0},{"e":"Br","x":0,"y":0,"z":0.5},{"e":"Br","x":0.5,"y":0.5,"z":0.5}]},{"name":"Иодид калия","formula":"KI","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":7.124,"b":7.124,"c":7.124,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"K","x":0,"y":0,"z":0},{"e":"K","x":0,"y":0.5,"z":0.5},{"e":"K","x":0.5,"y":0,"z":0.5},{"e":"K","x":0.5,"y":0.5,"z":0},{"e":"I","x":0.5,"y":0,"z":0},{"e":"I","x":0,"y":0.5,"z":0},{"e":"I","x":0,"y":0,"z":0.5},{"e":"I","x":0.5,"y":0.5,"z":0.5}]},{"name":"Фторид рубидия","formula":"RbF","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":5.632,"b":5.632,"c":5.632,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Rb","x":0,"y":0,"z":0},{"e":"Rb","x":0,"y":0.5,"z":0.5},{"e":"Rb","x":0.5,"y":0,"z":0.5},{"e":"Rb","x":0.5,"y":0.5,"z":0},{"e":"F","x":0.5,"y":0,"z":0},{"e":"F","x":0,"y":0.5,"z":0},{"e":"F","x":0,"y":0,"z":0.5},{"e":"F","x":0.5,"y":0.5,"z":0.5}]},{"name":"Хлорид рубидия","formula":"RbCl","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":6.627,"b":6.627,"c":6.627,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Rb","x":0,"y":0,"z":0},{"e":"Rb","x":0,"y":0.5,"z":0.5},{"e":"Rb","x":0.5,"y":0,"z":0.5},{"e":"Rb","x":0.5,"y":0.5,"z":0},{"e":"Cl","x":0.5,"y":0,"z":0},{"e":"Cl","x":0,"y":0.5,"z":0},{"e":"Cl","x":0,"y":0,"z":0.5},{"e":"Cl","x":0.5,"y":0.5,"z":0.5}]},{"name":"Бромид рубидия","formula":"RbBr","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":6.925,"b":6.925,"c":6.925,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Rb","x":0,"y":0,"z":0},{"e":"Rb","x":0,"y":0.5,"z":0.5},{"e":"Rb","x":0.5,"y":0,"z":0.5},{"e":"Rb","x":0.5,"y":0.5,"z":0},{"e":"Br","x":0.5,"y":0,"z":0},{"e":"Br","x":0,"y":0.5,"z":0},{"e":"Br","x":0,"y":0,"z":0.5},{"e":"Br","x":0.5,"y":0.5,"z":0.5}]},{"name":"Иодид рубидия","formula":"RbI","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":7.403,"b":7.403,"c":7.403,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Rb","x":0,"y":0,"z":0},{"e":"Rb","x":0,"y":0.5,"z":0.5},{"e":"Rb","x":0.5,"y":0,"z":0.5},{"e":"Rb","x":0.5,"y":0.5,"z":0},{"e":"I","x":0.5,"y":0,"z":0},{"e":"I","x":0,"y":0.5,"z":0},{"e":"I","x":0,"y":0,"z":0.5},{"e":"I","x":0.5,"y":0.5,"z":0.5}]},{"name":"Фторид цезия","formula":"CsF","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":5.93,"b":5.93,"c":5.93,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Cs","x":0,"y":0,"z":0},{"e":"Cs","x":0,"y":0.5,"z":0.5},{"e":"Cs","x":0.5,"y":0,"z":0.5},{"e":"Cs","x":0.5,"y":0.5,"z":0},{"e":"F","x":0.5,"y":0,"z":0},{"e":"F","x":0,"y":0.5,"z":0},{"e":"F","x":0,"y":0,"z":0.5},{"e":"F","x":0.5,"y":0.5,"z":0.5}]},{"name":"Фторид серебра","formula":"AgF","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.895,"b":4.895,"c":4.895,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Ag","x":0,"y":0,"z":0},{"e":"Ag","x":0,"y":0.5,"z":0.5},{"e":"Ag","x":0.5,"y":0,"z":0.5},{"e":"Ag","x":0.5,"y":0.5,"z":0},{"e":"F","x":0.5,"y":0,"z":0},{"e":"F","x":0,"y":0.5,"z":0},{"e":"F","x":0,"y":0,"z":0.5},{"e":"F","x":0.5,"y":0.5,"z":0.5}]},{"name":"Хлорид серебра","formula":"AgCl","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":5.89,"b":5.89,"c":5.89,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Ag","x":0,"y":0,"z":0},{"e":"Ag","x":0,"y":0.5,"z":0.5},{"e":"Ag","x":0.5,"y":0,"z":0.5},{"e":"Ag","x":0.5,"y":0.5,"z":0},{"e":"Cl","x":0.5,"y":0,"z":0},{"e":"Cl","x":0,"y":0.5,"z":0},{"e":"Cl","x":0,"y":0,"z":0.5},{"e":"Cl","x":0.5,"y":0.5,"z":0.5}]},{"name":"Бромид серебра","formula":"AgBr","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":6.189,"b":6.189,"c":6.189,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Ag","x":0,"y":0,"z":0},{"e":"Ag","x":0,"y":0.5,"z":0.5},{"e":"Ag","x":0.5,"y":0,"z":0.5},{"e":"Ag","x":0.5,"y":0.5,"z":0},{"e":"Br","x":0.5,"y":0,"z":0},{"e":"Br","x":0,"y":0.5,"z":0},{"e":"Br","x":0,"y":0,"z":0.5},{"e":"Br","x":0.5,"y":0.5,"z":0.5}]},{"name":"Оксид магния","formula":"MgO","aliases":["периклаз"],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.219,"b":4.219,"c":4.219,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Mg","x":0,"y":0,"z":0},{"e":"Mg","x":0,"y":0.5,"z":0.5},{"e":"Mg","x":0.5,"y":0,"z":0.5},{"e":"Mg","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0},{"e":"O","x":0,"y":0.5,"z":0},{"e":"O","x":0,"y":0,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0.5}]},{"name":"Оксид кальция","formula":"CaO","aliases":["негашёная известь"],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.776,"b":4.776,"c":4.776,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Ca","x":0,"y":0,"z":0},{"e":"Ca","x":0,"y":0.5,"z":0.5},{"e":"Ca","x":0.5,"y":0,"z":0.5},{"e":"Ca","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0},{"e":"O","x":0,"y":0.5,"z":0},{"e":"O","x":0,"y":0,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0.5}]},{"name":"Оксид стронция","formula":"SrO","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":5.134,"b":5.134,"c":5.134,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Sr","x":0,"y":0,"z":0},{"e":"Sr","x":0,"y":0.5,"z":0.5},{"e":"Sr","x":0.5,"y":0,"z":0.5},{"e":"Sr","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0},{"e":"O","x":0,"y":0.5,"z":0},{"e":"O","x":0,"y":0,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0.5}]},{"name":"Оксид бария","formula":"BaO","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":5.473,"b":5.473,"c":5.473,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Ba","x":0,"y":0,"z":0},{"e":"Ba","x":0,"y":0.5,"z":0.5},{"e":"Ba","x":0.5,"y":0,"z":0.5},{"e":"Ba","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0},{"e":"O","x":0,"y":0.5,"z":0},{"e":"O","x":0,"y":0,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0.5}]},{"name":"Оксид марганца(II)","formula":"MnO","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.438,"b":4.438,"c":4.438,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Mn","x":0,"y":0,"z":0},{"e":"Mn","x":0,"y":0.5,"z":0.5},{"e":"Mn","x":0.5,"y":0,"z":0.5},{"e":"Mn","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0},{"e":"O","x":0,"y":0.5,"z":0},{"e":"O","x":0,"y":0,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0.5}]},{"name":"Оксид железа(II)","formula":"FeO","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.338,"b":4.338,"c":4.338,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Fe","x":0,"y":0,"z":0},{"e":"Fe","x":0,"y":0.5,"z":0.5},{"e":"Fe","x":0.5,"y":0,"z":0.5},{"e":"Fe","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0},{"e":"O","x":0,"y":0.5,"z":0},{"e":"O","x":0,"y":0,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0.5}]},{"name":"Оксид кобальта(II)","formula":"CoO","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.269,"b":4.269,"c":4.269,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Co","x":0,"y":0,"z":0},{"e":"Co","x":0,"y":0.5,"z":0.5},{"e":"Co","x":0.5,"y":0,"z":0.5},{"e":"Co","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0},{"e":"O","x":0,"y":0.5,"z":0},{"e":"O","x":0,"y":0,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0.5}]},{"name":"Оксид никеля(II)","formula":"NiO","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.159,"b":4.159,"c":4.159,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Ni","x":0,"y":0,"z":0},{"e":"Ni","x":0,"y":0.5,"z":0.5},{"e":"Ni","x":0.5,"y":0,"z":0.5},{"e":"Ni","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0},{"e":"O","x":0,"y":0.5,"z":0},{"e":"O","x":0,"y":0,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0.5}]},{"name":"Оксид кадмия","formula":"CdO","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.676,"b":4.676,"c":4.676,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Cd","x":0,"y":0,"z":0},{"e":"Cd","x":0,"y":0.5,"z":0.5},{"e":"Cd","x":0.5,"y":0,"z":0.5},{"e":"Cd","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0},{"e":"O","x":0,"y":0.5,"z":0},{"e":"O","x":0,"y":0,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0.5}]},{"name":"Оксид европия(II)","formula":"EuO","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":5.114,"b":5.114,"c":5.114,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Eu","x":0,"y":0,"z":0},{"e":"Eu","x":0,"y":0.5,"z":0.5},{"e":"Eu","x":0.5,"y":0,"z":0.5},{"e":"Eu","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0},{"e":"O","x":0,"y":0.5,"z":0},{"e":"O","x":0,"y":0,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0.5}]},{"name":"Оксид самария(II)","formula":"SmO","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.935,"b":4.935,"c":4.935,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Sm","x":0,"y":0,"z":0},{"e":"Sm","x":0,"y":0.5,"z":0.5},{"e":"Sm","x":0.5,"y":0,"z":0.5},{"e":"Sm","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0},{"e":"O","x":0,"y":0.5,"z":0},{"e":"O","x":0,"y":0,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0.5}]},{"name":"Оксид иттербия(II)","formula":"YbO","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.816,"b":4.816,"c":4.816,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Yb","x":0,"y":0,"z":0},{"e":"Yb","x":0,"y":0.5,"z":0.5},{"e":"Yb","x":0.5,"y":0,"z":0.5},{"e":"Yb","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0},{"e":"O","x":0,"y":0.5,"z":0},{"e":"O","x":0,"y":0,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0.5}]},{"name":"Сульфид свинца(II)","formula":"PbS","aliases":["галенит"],"type":"ionic","system":"cubic","family":"тип NaCl","a":6.03,"b":6.03,"c":6.03,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Pb","x":0,"y":0,"z":0},{"e":"Pb","x":0,"y":0.5,"z":0.5},{"e":"Pb","x":0.5,"y":0,"z":0.5},{"e":"Pb","x":0.5,"y":0.5,"z":0},{"e":"S","x":0.5,"y":0,"z":0},{"e":"S","x":0,"y":0.5,"z":0},{"e":"S","x":0,"y":0,"z":0.5},{"e":"S","x":0.5,"y":0.5,"z":0.5}]},{"name":"Селенид свинца(II)","formula":"PbSe","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":6.308,"b":6.308,"c":6.308,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Pb","x":0,"y":0,"z":0},{"e":"Pb","x":0,"y":0.5,"z":0.5},{"e":"Pb","x":0.5,"y":0,"z":0.5},{"e":"Pb","x":0.5,"y":0.5,"z":0},{"e":"Se","x":0.5,"y":0,"z":0},{"e":"Se","x":0,"y":0.5,"z":0},{"e":"Se","x":0,"y":0,"z":0.5},{"e":"Se","x":0.5,"y":0.5,"z":0.5}]},{"name":"Теллурид свинца(II)","formula":"PbTe","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":6.766,"b":6.766,"c":6.766,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Pb","x":0,"y":0,"z":0},{"e":"Pb","x":0,"y":0.5,"z":0.5},{"e":"Pb","x":0.5,"y":0,"z":0.5},{"e":"Pb","x":0.5,"y":0.5,"z":0},{"e":"Te","x":0.5,"y":0,"z":0},{"e":"Te","x":0,"y":0.5,"z":0},{"e":"Te","x":0,"y":0,"z":0.5},{"e":"Te","x":0.5,"y":0.5,"z":0.5}]},{"name":"Теллурид олова(II)","formula":"SnTe","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":6.746,"b":6.746,"c":6.746,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Sn","x":0,"y":0,"z":0},{"e":"Sn","x":0,"y":0.5,"z":0.5},{"e":"Sn","x":0.5,"y":0,"z":0.5},{"e":"Sn","x":0.5,"y":0.5,"z":0},{"e":"Te","x":0.5,"y":0,"z":0},{"e":"Te","x":0,"y":0.5,"z":0},{"e":"Te","x":0,"y":0,"z":0.5},{"e":"Te","x":0.5,"y":0.5,"z":0.5}]},{"name":"Сульфид кальция","formula":"CaS","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":5.652,"b":5.652,"c":5.652,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Ca","x":0,"y":0,"z":0},{"e":"Ca","x":0,"y":0.5,"z":0.5},{"e":"Ca","x":0.5,"y":0,"z":0.5},{"e":"Ca","x":0.5,"y":0.5,"z":0},{"e":"S","x":0.5,"y":0,"z":0},{"e":"S","x":0,"y":0.5,"z":0},{"e":"S","x":0,"y":0,"z":0.5},{"e":"S","x":0.5,"y":0.5,"z":0.5}]},{"name":"Сульфид стронция","formula":"SrS","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":6.01,"b":6.01,"c":6.01,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Sr","x":0,"y":0,"z":0},{"e":"Sr","x":0,"y":0.5,"z":0.5},{"e":"Sr","x":0.5,"y":0,"z":0.5},{"e":"Sr","x":0.5,"y":0.5,"z":0},{"e":"S","x":0.5,"y":0,"z":0},{"e":"S","x":0,"y":0.5,"z":0},{"e":"S","x":0,"y":0,"z":0.5},{"e":"S","x":0.5,"y":0.5,"z":0.5}]},{"name":"Сульфид бария","formula":"BaS","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":6.348,"b":6.348,"c":6.348,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Ba","x":0,"y":0,"z":0},{"e":"Ba","x":0,"y":0.5,"z":0.5},{"e":"Ba","x":0.5,"y":0,"z":0.5},{"e":"Ba","x":0.5,"y":0.5,"z":0},{"e":"S","x":0.5,"y":0,"z":0},{"e":"S","x":0,"y":0.5,"z":0},{"e":"S","x":0,"y":0,"z":0.5},{"e":"S","x":0.5,"y":0.5,"z":0.5}]},{"name":"Сульфид магния","formula":"MgS","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":5.094,"b":5.094,"c":5.094,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Mg","x":0,"y":0,"z":0},{"e":"Mg","x":0,"y":0.5,"z":0.5},{"e":"Mg","x":0.5,"y":0,"z":0.5},{"e":"Mg","x":0.5,"y":0.5,"z":0},{"e":"S","x":0.5,"y":0,"z":0},{"e":"S","x":0,"y":0.5,"z":0},{"e":"S","x":0,"y":0,"z":0.5},{"e":"S","x":0.5,"y":0.5,"z":0.5}]},{"name":"Сульфид марганца(II)","formula":"MnS","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":5.313,"b":5.313,"c":5.313,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Mn","x":0,"y":0,"z":0},{"e":"Mn","x":0,"y":0.5,"z":0.5},{"e":"Mn","x":0.5,"y":0,"z":0.5},{"e":"Mn","x":0.5,"y":0.5,"z":0},{"e":"S","x":0.5,"y":0,"z":0},{"e":"S","x":0,"y":0.5,"z":0},{"e":"S","x":0,"y":0,"z":0.5},{"e":"S","x":0.5,"y":0.5,"z":0.5}]},{"name":"Сульфид европия(II)","formula":"EuS","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":5.99,"b":5.99,"c":5.99,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Eu","x":0,"y":0,"z":0},{"e":"Eu","x":0,"y":0.5,"z":0.5},{"e":"Eu","x":0.5,"y":0,"z":0.5},{"e":"Eu","x":0.5,"y":0.5,"z":0},{"e":"S","x":0.5,"y":0,"z":0},{"e":"S","x":0,"y":0.5,"z":0},{"e":"S","x":0,"y":0,"z":0.5},{"e":"S","x":0.5,"y":0.5,"z":0.5}]},{"name":"Сульфид самария(II)","formula":"SmS","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":5.811,"b":5.811,"c":5.811,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Sm","x":0,"y":0,"z":0},{"e":"Sm","x":0,"y":0.5,"z":0.5},{"e":"Sm","x":0.5,"y":0,"z":0.5},{"e":"Sm","x":0.5,"y":0.5,"z":0},{"e":"S","x":0.5,"y":0,"z":0},{"e":"S","x":0,"y":0.5,"z":0},{"e":"S","x":0,"y":0,"z":0.5},{"e":"S","x":0.5,"y":0.5,"z":0.5}]},{"name":"Нитрид титана","formula":"TiN","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.239,"b":4.239,"c":4.239,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Ti","x":0,"y":0,"z":0},{"e":"Ti","x":0,"y":0.5,"z":0.5},{"e":"Ti","x":0.5,"y":0,"z":0.5},{"e":"Ti","x":0.5,"y":0.5,"z":0},{"e":"N","x":0.5,"y":0,"z":0},{"e":"N","x":0,"y":0.5,"z":0},{"e":"N","x":0,"y":0,"z":0.5},{"e":"N","x":0.5,"y":0.5,"z":0.5}]},{"name":"Нитрид циркония","formula":"ZrN","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.338,"b":4.338,"c":4.338,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Zr","x":0,"y":0,"z":0},{"e":"Zr","x":0,"y":0.5,"z":0.5},{"e":"Zr","x":0.5,"y":0,"z":0.5},{"e":"Zr","x":0.5,"y":0.5,"z":0},{"e":"N","x":0.5,"y":0,"z":0},{"e":"N","x":0,"y":0.5,"z":0},{"e":"N","x":0,"y":0,"z":0.5},{"e":"N","x":0.5,"y":0.5,"z":0.5}]},{"name":"Нитрид гафния","formula":"HfN","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.318,"b":4.318,"c":4.318,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Hf","x":0,"y":0,"z":0},{"e":"Hf","x":0,"y":0.5,"z":0.5},{"e":"Hf","x":0.5,"y":0,"z":0.5},{"e":"Hf","x":0.5,"y":0.5,"z":0},{"e":"N","x":0.5,"y":0,"z":0},{"e":"N","x":0,"y":0.5,"z":0},{"e":"N","x":0,"y":0,"z":0.5},{"e":"N","x":0.5,"y":0.5,"z":0.5}]},{"name":"Нитрид ванадия","formula":"VN","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.179,"b":4.179,"c":4.179,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"V","x":0,"y":0,"z":0},{"e":"V","x":0,"y":0.5,"z":0.5},{"e":"V","x":0.5,"y":0,"z":0.5},{"e":"V","x":0.5,"y":0.5,"z":0},{"e":"N","x":0.5,"y":0,"z":0},{"e":"N","x":0,"y":0.5,"z":0},{"e":"N","x":0,"y":0,"z":0.5},{"e":"N","x":0.5,"y":0.5,"z":0.5}]},{"name":"Нитрид ниобия","formula":"NbN","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.338,"b":4.338,"c":4.338,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Nb","x":0,"y":0,"z":0},{"e":"Nb","x":0,"y":0.5,"z":0.5},{"e":"Nb","x":0.5,"y":0,"z":0.5},{"e":"Nb","x":0.5,"y":0.5,"z":0},{"e":"N","x":0.5,"y":0,"z":0},{"e":"N","x":0,"y":0.5,"z":0},{"e":"N","x":0,"y":0,"z":0.5},{"e":"N","x":0.5,"y":0.5,"z":0.5}]},{"name":"Нитрид тантала","formula":"TaN","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.338,"b":4.338,"c":4.338,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Ta","x":0,"y":0,"z":0},{"e":"Ta","x":0,"y":0.5,"z":0.5},{"e":"Ta","x":0.5,"y":0,"z":0.5},{"e":"Ta","x":0.5,"y":0.5,"z":0},{"e":"N","x":0.5,"y":0,"z":0},{"e":"N","x":0,"y":0.5,"z":0},{"e":"N","x":0,"y":0,"z":0.5},{"e":"N","x":0.5,"y":0.5,"z":0.5}]},{"name":"Нитрид хрома","formula":"CrN","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.129,"b":4.129,"c":4.129,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Cr","x":0,"y":0,"z":0},{"e":"Cr","x":0,"y":0.5,"z":0.5},{"e":"Cr","x":0.5,"y":0,"z":0.5},{"e":"Cr","x":0.5,"y":0.5,"z":0},{"e":"N","x":0.5,"y":0,"z":0},{"e":"N","x":0,"y":0.5,"z":0},{"e":"N","x":0,"y":0,"z":0.5},{"e":"N","x":0.5,"y":0.5,"z":0.5}]},{"name":"Нитрид скандия","formula":"ScN","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.388,"b":4.388,"c":4.388,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Sc","x":0,"y":0,"z":0},{"e":"Sc","x":0,"y":0.5,"z":0.5},{"e":"Sc","x":0.5,"y":0,"z":0.5},{"e":"Sc","x":0.5,"y":0.5,"z":0},{"e":"N","x":0.5,"y":0,"z":0},{"e":"N","x":0,"y":0.5,"z":0},{"e":"N","x":0,"y":0,"z":0.5},{"e":"N","x":0.5,"y":0.5,"z":0.5}]},{"name":"Нитрид лантана","formula":"LaN","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.955,"b":4.955,"c":4.955,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"La","x":0,"y":0,"z":0},{"e":"La","x":0,"y":0.5,"z":0.5},{"e":"La","x":0.5,"y":0,"z":0.5},{"e":"La","x":0.5,"y":0.5,"z":0},{"e":"N","x":0.5,"y":0,"z":0},{"e":"N","x":0,"y":0.5,"z":0},{"e":"N","x":0,"y":0,"z":0.5},{"e":"N","x":0.5,"y":0.5,"z":0.5}]},{"name":"Карбид титана","formula":"TiC","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.239,"b":4.239,"c":4.239,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Ti","x":0,"y":0,"z":0},{"e":"Ti","x":0,"y":0.5,"z":0.5},{"e":"Ti","x":0.5,"y":0,"z":0.5},{"e":"Ti","x":0.5,"y":0.5,"z":0},{"e":"C","x":0.5,"y":0,"z":0},{"e":"C","x":0,"y":0.5,"z":0},{"e":"C","x":0,"y":0,"z":0.5},{"e":"C","x":0.5,"y":0.5,"z":0.5}]},{"name":"Карбид циркония","formula":"ZrC","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.338,"b":4.338,"c":4.338,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"Zr","x":0,"y":0,"z":0},{"e":"Zr","x":0,"y":0.5,"z":0.5},{"e":"Zr","x":0.5,"y":0,"z":0.5},{"e":"Zr","x":0.5,"y":0.5,"z":0},{"e":"C","x":0.5,"y":0,"z":0},{"e":"C","x":0,"y":0.5,"z":0},{"e":"C","x":0,"y":0,"z":0.5},{"e":"C","x":0.5,"y":0.5,"z":0.5}]},{"name":"Карбид урана","formula":"UC","aliases":[],"type":"ionic","system":"cubic","family":"тип NaCl","a":4.676,"b":4.676,"c":4.676,"al":90,"be":90,"ga":90,"z":4,"coord":6,"desc":"Ионная решётка типа NaCl: каждый ион окружён шестью ионами противоположного знака.","atoms":[{"e":"U","x":0,"y":0,"z":0},{"e":"U","x":0,"y":0.5,"z":0.5},{"e":"U","x":0.5,"y":0,"z":0.5},{"e":"U","x":0.5,"y":0.5,"z":0},{"e":"C","x":0.5,"y":0,"z":0},{"e":"C","x":0,"y":0.5,"z":0},{"e":"C","x":0,"y":0,"z":0.5},{"e":"C","x":0.5,"y":0.5,"z":0.5}]},{"name":"CsCl","formula":"CsCl","aliases":[],"type":"ionic","system":"cubic","family":"тип CsCl","a":4.139,"b":4.139,"c":4.139,"al":90,"be":90,"ga":90,"z":1,"coord":8,"desc":"Ионная решётка типа CsCl: координационное число 8.","atoms":[{"e":"Cs","x":0,"y":0,"z":0},{"e":"Cl","x":0.5,"y":0.5,"z":0.5}]},{"name":"CsBr","formula":"CsBr","aliases":[],"type":"ionic","system":"cubic","family":"тип CsCl","a":4.317,"b":4.317,"c":4.317,"al":90,"be":90,"ga":90,"z":1,"coord":8,"desc":"Ионная решётка типа CsCl: координационное число 8.","atoms":[{"e":"Cs","x":0,"y":0,"z":0},{"e":"Br","x":0.5,"y":0.5,"z":0.5}]},{"name":"CsI","formula":"CsI","aliases":[],"type":"ionic","system":"cubic","family":"тип CsCl","a":4.603,"b":4.603,"c":4.603,"al":90,"be":90,"ga":90,"z":1,"coord":8,"desc":"Ионная решётка типа CsCl: координационное число 8.","atoms":[{"e":"Cs","x":0,"y":0,"z":0},{"e":"I","x":0.5,"y":0.5,"z":0.5}]},{"name":"β-Латунь","formula":"CuZn","aliases":[],"type":"metallic","system":"cubic","family":"тип CsCl","a":2.95,"b":2.95,"c":2.95,"al":90,"be":90,"ga":90,"z":1,"coord":8,"desc":"Ионная решётка типа CsCl: координационное число 8.","atoms":[{"e":"Cu","x":0,"y":0,"z":0},{"e":"Zn","x":0.5,"y":0.5,"z":0.5}]},{"name":"Алюминид никеля","formula":"NiAl","aliases":[],"type":"metallic","system":"cubic","family":"тип CsCl","a":2.89,"b":2.89,"c":2.89,"al":90,"be":90,"ga":90,"z":1,"coord":8,"desc":"Ионная решётка типа CsCl: координационное число 8.","atoms":[{"e":"Ni","x":0,"y":0,"z":0},{"e":"Al","x":0.5,"y":0.5,"z":0.5}]},{"name":"Алюминид железа","formula":"FeAl","aliases":[],"type":"metallic","system":"cubic","family":"тип CsCl","a":2.9,"b":2.9,"c":2.9,"al":90,"be":90,"ga":90,"z":1,"coord":8,"desc":"Ионная решётка типа CsCl: координационное число 8.","atoms":[{"e":"Fe","x":0,"y":0,"z":0},{"e":"Al","x":0.5,"y":0.5,"z":0.5}]},{"name":"Алюминид кобальта","formula":"CoAl","aliases":[],"type":"metallic","system":"cubic","family":"тип CsCl","a":2.87,"b":2.87,"c":2.87,"al":90,"be":90,"ga":90,"z":1,"coord":8,"desc":"Ионная решётка типа CsCl: координационное число 8.","atoms":[{"e":"Co","x":0,"y":0,"z":0},{"e":"Al","x":0.5,"y":0.5,"z":0.5}]},{"name":"Сплав AgMg","formula":"AgMg","aliases":[],"type":"metallic","system":"cubic","family":"тип CsCl","a":3.28,"b":3.28,"c":3.28,"al":90,"be":90,"ga":90,"z":1,"coord":8,"desc":"Ионная решётка типа CsCl: координационное число 8.","atoms":[{"e":"Ag","x":0,"y":0,"z":0},{"e":"Mg","x":0.5,"y":0.5,"z":0.5}]},{"name":"Сплав AuZn","formula":"AuZn","aliases":[],"type":"metallic","system":"cubic","family":"тип CsCl","a":3.19,"b":3.19,"c":3.19,"al":90,"be":90,"ga":90,"z":1,"coord":8,"desc":"Ионная решётка типа CsCl: координационное число 8.","atoms":[{"e":"Au","x":0,"y":0,"z":0},{"e":"Zn","x":0.5,"y":0.5,"z":0.5}]},{"name":"Сплав LiAg","formula":"LiAg","aliases":[],"type":"metallic","system":"cubic","family":"тип CsCl","a":3.0,"b":3.0,"c":3.0,"al":90,"be":90,"ga":90,"z":1,"coord":8,"desc":"Ионная решётка типа CsCl: координационное число 8.","atoms":[{"e":"Li","x":0,"y":0,"z":0},{"e":"Ag","x":0.5,"y":0.5,"z":0.5}]},{"name":"Сплав CuPd","formula":"CuPd","aliases":[],"type":"metallic","system":"cubic","family":"тип CsCl","a":2.99,"b":2.99,"c":2.99,"al":90,"be":90,"ga":90,"z":1,"coord":8,"desc":"Ионная решётка типа CsCl: координационное число 8.","atoms":[{"e":"Cu","x":0,"y":0,"z":0},{"e":"Pd","x":0.5,"y":0.5,"z":0.5}]},{"name":"Нитинол","formula":"NiTi","aliases":[],"type":"metallic","system":"cubic","family":"тип CsCl","a":3.01,"b":3.01,"c":3.01,"al":90,"be":90,"ga":90,"z":1,"coord":8,"desc":"Ионная решётка типа CsCl: координационное число 8.","atoms":[{"e":"Ni","x":0,"y":0,"z":0},{"e":"Ti","x":0.5,"y":0.5,"z":0.5}]},{"name":"Сульфид цинка (сфалерит)","formula":"ZnS","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":5.41,"b":5.41,"c":5.41,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Zn","x":0,"y":0,"z":0},{"e":"Zn","x":0,"y":0.5,"z":0.5},{"e":"Zn","x":0.5,"y":0,"z":0.5},{"e":"Zn","x":0.5,"y":0.5,"z":0},{"e":"S","x":0.25,"y":0.25,"z":0.25},{"e":"S","x":0.25,"y":0.75,"z":0.75},{"e":"S","x":0.75,"y":0.25,"z":0.75},{"e":"S","x":0.75,"y":0.75,"z":0.25}]},{"name":"Селенид цинка","formula":"ZnSe","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":5.67,"b":5.67,"c":5.67,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Zn","x":0,"y":0,"z":0},{"e":"Zn","x":0,"y":0.5,"z":0.5},{"e":"Zn","x":0.5,"y":0,"z":0.5},{"e":"Zn","x":0.5,"y":0.5,"z":0},{"e":"Se","x":0.25,"y":0.25,"z":0.25},{"e":"Se","x":0.25,"y":0.75,"z":0.75},{"e":"Se","x":0.75,"y":0.25,"z":0.75},{"e":"Se","x":0.75,"y":0.75,"z":0.25}]},{"name":"Теллурид цинка","formula":"ZnTe","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":6.1,"b":6.1,"c":6.1,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Zn","x":0,"y":0,"z":0},{"e":"Zn","x":0,"y":0.5,"z":0.5},{"e":"Zn","x":0.5,"y":0,"z":0.5},{"e":"Zn","x":0.5,"y":0.5,"z":0},{"e":"Te","x":0.25,"y":0.25,"z":0.25},{"e":"Te","x":0.25,"y":0.75,"z":0.75},{"e":"Te","x":0.75,"y":0.25,"z":0.75},{"e":"Te","x":0.75,"y":0.75,"z":0.25}]},{"name":"Сульфид кадмия (сфалерит)","formula":"CdS","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":5.83,"b":5.83,"c":5.83,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Cd","x":0,"y":0,"z":0},{"e":"Cd","x":0,"y":0.5,"z":0.5},{"e":"Cd","x":0.5,"y":0,"z":0.5},{"e":"Cd","x":0.5,"y":0.5,"z":0},{"e":"S","x":0.25,"y":0.25,"z":0.25},{"e":"S","x":0.25,"y":0.75,"z":0.75},{"e":"S","x":0.75,"y":0.25,"z":0.75},{"e":"S","x":0.75,"y":0.75,"z":0.25}]},{"name":"Теллурид кадмия (сфалерит)","formula":"CdTe","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":6.48,"b":6.48,"c":6.48,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Cd","x":0,"y":0,"z":0},{"e":"Cd","x":0,"y":0.5,"z":0.5},{"e":"Cd","x":0.5,"y":0,"z":0.5},{"e":"Cd","x":0.5,"y":0.5,"z":0},{"e":"Te","x":0.25,"y":0.25,"z":0.25},{"e":"Te","x":0.25,"y":0.75,"z":0.75},{"e":"Te","x":0.75,"y":0.25,"z":0.75},{"e":"Te","x":0.75,"y":0.75,"z":0.25}]},{"name":"Сульфид ртути (метациннабарит)","formula":"HgS","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":5.85,"b":5.85,"c":5.85,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Hg","x":0,"y":0,"z":0},{"e":"Hg","x":0,"y":0.5,"z":0.5},{"e":"Hg","x":0.5,"y":0,"z":0.5},{"e":"Hg","x":0.5,"y":0.5,"z":0},{"e":"S","x":0.25,"y":0.25,"z":0.25},{"e":"S","x":0.25,"y":0.75,"z":0.75},{"e":"S","x":0.75,"y":0.25,"z":0.75},{"e":"S","x":0.75,"y":0.75,"z":0.25}]},{"name":"Селенид ртути","formula":"HgSe","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":6.08,"b":6.08,"c":6.08,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Hg","x":0,"y":0,"z":0},{"e":"Hg","x":0,"y":0.5,"z":0.5},{"e":"Hg","x":0.5,"y":0,"z":0.5},{"e":"Hg","x":0.5,"y":0.5,"z":0},{"e":"Se","x":0.25,"y":0.25,"z":0.25},{"e":"Se","x":0.25,"y":0.75,"z":0.75},{"e":"Se","x":0.75,"y":0.25,"z":0.75},{"e":"Se","x":0.75,"y":0.75,"z":0.25}]},{"name":"Теллурид ртути","formula":"HgTe","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":6.45,"b":6.45,"c":6.45,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Hg","x":0,"y":0,"z":0},{"e":"Hg","x":0,"y":0.5,"z":0.5},{"e":"Hg","x":0.5,"y":0,"z":0.5},{"e":"Hg","x":0.5,"y":0.5,"z":0},{"e":"Te","x":0.25,"y":0.25,"z":0.25},{"e":"Te","x":0.25,"y":0.75,"z":0.75},{"e":"Te","x":0.75,"y":0.25,"z":0.75},{"e":"Te","x":0.75,"y":0.75,"z":0.25}]},{"name":"Арсенид галлия","formula":"GaAs","aliases":["gaas"],"type":"covalent","system":"cubic","family":"сфалерит","a":5.65,"b":5.65,"c":5.65,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Ga","x":0,"y":0,"z":0},{"e":"Ga","x":0,"y":0.5,"z":0.5},{"e":"Ga","x":0.5,"y":0,"z":0.5},{"e":"Ga","x":0.5,"y":0.5,"z":0},{"e":"As","x":0.25,"y":0.25,"z":0.25},{"e":"As","x":0.25,"y":0.75,"z":0.75},{"e":"As","x":0.75,"y":0.25,"z":0.75},{"e":"As","x":0.75,"y":0.75,"z":0.25}]},{"name":"Фосфид галлия","formula":"GaP","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":5.45,"b":5.45,"c":5.45,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Ga","x":0,"y":0,"z":0},{"e":"Ga","x":0,"y":0.5,"z":0.5},{"e":"Ga","x":0.5,"y":0,"z":0.5},{"e":"Ga","x":0.5,"y":0.5,"z":0},{"e":"P","x":0.25,"y":0.25,"z":0.25},{"e":"P","x":0.25,"y":0.75,"z":0.75},{"e":"P","x":0.75,"y":0.25,"z":0.75},{"e":"P","x":0.75,"y":0.75,"z":0.25}]},{"name":"Антимонид галлия","formula":"GaSb","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":6.1,"b":6.1,"c":6.1,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Ga","x":0,"y":0,"z":0},{"e":"Ga","x":0,"y":0.5,"z":0.5},{"e":"Ga","x":0.5,"y":0,"z":0.5},{"e":"Ga","x":0.5,"y":0.5,"z":0},{"e":"Sb","x":0.25,"y":0.25,"z":0.25},{"e":"Sb","x":0.25,"y":0.75,"z":0.75},{"e":"Sb","x":0.75,"y":0.25,"z":0.75},{"e":"Sb","x":0.75,"y":0.75,"z":0.25}]},{"name":"Арсенид индия","formula":"InAs","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":6.06,"b":6.06,"c":6.06,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"In","x":0,"y":0,"z":0},{"e":"In","x":0,"y":0.5,"z":0.5},{"e":"In","x":0.5,"y":0,"z":0.5},{"e":"In","x":0.5,"y":0.5,"z":0},{"e":"As","x":0.25,"y":0.25,"z":0.25},{"e":"As","x":0.25,"y":0.75,"z":0.75},{"e":"As","x":0.75,"y":0.25,"z":0.75},{"e":"As","x":0.75,"y":0.75,"z":0.25}]},{"name":"Фосфид индия","formula":"InP","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":5.87,"b":5.87,"c":5.87,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"In","x":0,"y":0,"z":0},{"e":"In","x":0,"y":0.5,"z":0.5},{"e":"In","x":0.5,"y":0,"z":0.5},{"e":"In","x":0.5,"y":0.5,"z":0},{"e":"P","x":0.25,"y":0.25,"z":0.25},{"e":"P","x":0.25,"y":0.75,"z":0.75},{"e":"P","x":0.75,"y":0.25,"z":0.75},{"e":"P","x":0.75,"y":0.75,"z":0.25}]},{"name":"Антимонид индия","formula":"InSb","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":6.48,"b":6.48,"c":6.48,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"In","x":0,"y":0,"z":0},{"e":"In","x":0,"y":0.5,"z":0.5},{"e":"In","x":0.5,"y":0,"z":0.5},{"e":"In","x":0.5,"y":0.5,"z":0},{"e":"Sb","x":0.25,"y":0.25,"z":0.25},{"e":"Sb","x":0.25,"y":0.75,"z":0.75},{"e":"Sb","x":0.75,"y":0.25,"z":0.75},{"e":"Sb","x":0.75,"y":0.75,"z":0.25}]},{"name":"Фосфид алюминия","formula":"AlP","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":5.46,"b":5.46,"c":5.46,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Al","x":0,"y":0,"z":0},{"e":"Al","x":0,"y":0.5,"z":0.5},{"e":"Al","x":0.5,"y":0,"z":0.5},{"e":"Al","x":0.5,"y":0.5,"z":0},{"e":"P","x":0.25,"y":0.25,"z":0.25},{"e":"P","x":0.25,"y":0.75,"z":0.75},{"e":"P","x":0.75,"y":0.25,"z":0.75},{"e":"P","x":0.75,"y":0.75,"z":0.25}]},{"name":"Арсенид алюминия","formula":"AlAs","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":5.66,"b":5.66,"c":5.66,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Al","x":0,"y":0,"z":0},{"e":"Al","x":0,"y":0.5,"z":0.5},{"e":"Al","x":0.5,"y":0,"z":0.5},{"e":"Al","x":0.5,"y":0.5,"z":0},{"e":"As","x":0.25,"y":0.25,"z":0.25},{"e":"As","x":0.25,"y":0.75,"z":0.75},{"e":"As","x":0.75,"y":0.25,"z":0.75},{"e":"As","x":0.75,"y":0.75,"z":0.25}]},{"name":"Антимонид алюминия","formula":"AlSb","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":6.14,"b":6.14,"c":6.14,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Al","x":0,"y":0,"z":0},{"e":"Al","x":0,"y":0.5,"z":0.5},{"e":"Al","x":0.5,"y":0,"z":0.5},{"e":"Al","x":0.5,"y":0.5,"z":0},{"e":"Sb","x":0.25,"y":0.25,"z":0.25},{"e":"Sb","x":0.25,"y":0.75,"z":0.75},{"e":"Sb","x":0.75,"y":0.25,"z":0.75},{"e":"Sb","x":0.75,"y":0.75,"z":0.25}]},{"name":"Карбид кремния (3C)","formula":"SiC","aliases":["карборунд"],"type":"covalent","system":"cubic","family":"сфалерит","a":4.36,"b":4.36,"c":4.36,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Si","x":0,"y":0,"z":0},{"e":"Si","x":0,"y":0.5,"z":0.5},{"e":"Si","x":0.5,"y":0,"z":0.5},{"e":"Si","x":0.5,"y":0.5,"z":0},{"e":"C","x":0.25,"y":0.25,"z":0.25},{"e":"C","x":0.25,"y":0.75,"z":0.75},{"e":"C","x":0.75,"y":0.25,"z":0.75},{"e":"C","x":0.75,"y":0.75,"z":0.25}]},{"name":"Хлорид меди(I)","formula":"CuCl","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":5.42,"b":5.42,"c":5.42,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Cu","x":0,"y":0,"z":0},{"e":"Cu","x":0,"y":0.5,"z":0.5},{"e":"Cu","x":0.5,"y":0,"z":0.5},{"e":"Cu","x":0.5,"y":0.5,"z":0},{"e":"Cl","x":0.25,"y":0.25,"z":0.25},{"e":"Cl","x":0.25,"y":0.75,"z":0.75},{"e":"Cl","x":0.75,"y":0.25,"z":0.75},{"e":"Cl","x":0.75,"y":0.75,"z":0.25}]},{"name":"Бромид меди(I)","formula":"CuBr","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":5.69,"b":5.69,"c":5.69,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Cu","x":0,"y":0,"z":0},{"e":"Cu","x":0,"y":0.5,"z":0.5},{"e":"Cu","x":0.5,"y":0,"z":0.5},{"e":"Cu","x":0.5,"y":0.5,"z":0},{"e":"Br","x":0.25,"y":0.25,"z":0.25},{"e":"Br","x":0.25,"y":0.75,"z":0.75},{"e":"Br","x":0.75,"y":0.25,"z":0.75},{"e":"Br","x":0.75,"y":0.75,"z":0.25}]},{"name":"Иодид меди(I)","formula":"CuI","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":6.05,"b":6.05,"c":6.05,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Cu","x":0,"y":0,"z":0},{"e":"Cu","x":0,"y":0.5,"z":0.5},{"e":"Cu","x":0.5,"y":0,"z":0.5},{"e":"Cu","x":0.5,"y":0.5,"z":0},{"e":"I","x":0.25,"y":0.25,"z":0.25},{"e":"I","x":0.25,"y":0.75,"z":0.75},{"e":"I","x":0.75,"y":0.25,"z":0.75},{"e":"I","x":0.75,"y":0.75,"z":0.25}]},{"name":"Нитрид бора (кубический)","formula":"BN","aliases":["эльбор","боразон"],"type":"covalent","system":"cubic","family":"сфалерит","a":3.62,"b":3.62,"c":3.62,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"B","x":0,"y":0,"z":0},{"e":"B","x":0,"y":0.5,"z":0.5},{"e":"B","x":0.5,"y":0,"z":0.5},{"e":"B","x":0.5,"y":0.5,"z":0},{"e":"N","x":0.25,"y":0.25,"z":0.25},{"e":"N","x":0.25,"y":0.75,"z":0.75},{"e":"N","x":0.75,"y":0.25,"z":0.75},{"e":"N","x":0.75,"y":0.75,"z":0.25}]},{"name":"Сульфид бериллия","formula":"BeS","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":4.86,"b":4.86,"c":4.86,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Be","x":0,"y":0,"z":0},{"e":"Be","x":0,"y":0.5,"z":0.5},{"e":"Be","x":0.5,"y":0,"z":0.5},{"e":"Be","x":0.5,"y":0.5,"z":0},{"e":"S","x":0.25,"y":0.25,"z":0.25},{"e":"S","x":0.25,"y":0.75,"z":0.75},{"e":"S","x":0.75,"y":0.25,"z":0.75},{"e":"S","x":0.75,"y":0.75,"z":0.25}]},{"name":"Селенид бериллия","formula":"BeSe","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":5.45,"b":5.45,"c":5.45,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Be","x":0,"y":0,"z":0},{"e":"Be","x":0,"y":0.5,"z":0.5},{"e":"Be","x":0.5,"y":0,"z":0.5},{"e":"Be","x":0.5,"y":0.5,"z":0},{"e":"Se","x":0.25,"y":0.25,"z":0.25},{"e":"Se","x":0.25,"y":0.75,"z":0.75},{"e":"Se","x":0.75,"y":0.25,"z":0.75},{"e":"Se","x":0.75,"y":0.75,"z":0.25}]},{"name":"Теллурид бериллия","formula":"BeTe","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":5.63,"b":5.63,"c":5.63,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Be","x":0,"y":0,"z":0},{"e":"Be","x":0,"y":0.5,"z":0.5},{"e":"Be","x":0.5,"y":0,"z":0.5},{"e":"Be","x":0.5,"y":0.5,"z":0},{"e":"Te","x":0.25,"y":0.25,"z":0.25},{"e":"Te","x":0.25,"y":0.75,"z":0.75},{"e":"Te","x":0.75,"y":0.25,"z":0.75},{"e":"Te","x":0.75,"y":0.75,"z":0.25}]},{"name":"Сульфид марганца (сфалерит)","formula":"MnS","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":5.22,"b":5.22,"c":5.22,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Mn","x":0,"y":0,"z":0},{"e":"Mn","x":0,"y":0.5,"z":0.5},{"e":"Mn","x":0.5,"y":0,"z":0.5},{"e":"Mn","x":0.5,"y":0.5,"z":0},{"e":"S","x":0.25,"y":0.25,"z":0.25},{"e":"S","x":0.25,"y":0.75,"z":0.75},{"e":"S","x":0.75,"y":0.25,"z":0.75},{"e":"S","x":0.75,"y":0.75,"z":0.25}]},{"name":"Селенид марганца (сфалерит)","formula":"MnSe","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":5.45,"b":5.45,"c":5.45,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Mn","x":0,"y":0,"z":0},{"e":"Mn","x":0,"y":0.5,"z":0.5},{"e":"Mn","x":0.5,"y":0,"z":0.5},{"e":"Mn","x":0.5,"y":0.5,"z":0},{"e":"Se","x":0.25,"y":0.25,"z":0.25},{"e":"Se","x":0.25,"y":0.75,"z":0.75},{"e":"Se","x":0.75,"y":0.25,"z":0.75},{"e":"Se","x":0.75,"y":0.75,"z":0.25}]},{"name":"Теллурид марганца (сфалерит)","formula":"MnTe","aliases":[],"type":"covalent","system":"cubic","family":"сфалерит","a":5.89,"b":5.89,"c":5.89,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Ковалентная кубическая решётка типа сфалерита: тетраэдрическое окружение.","atoms":[{"e":"Mn","x":0,"y":0,"z":0},{"e":"Mn","x":0,"y":0.5,"z":0.5},{"e":"Mn","x":0.5,"y":0,"z":0.5},{"e":"Mn","x":0.5,"y":0.5,"z":0},{"e":"Te","x":0.25,"y":0.25,"z":0.25},{"e":"Te","x":0.25,"y":0.75,"z":0.75},{"e":"Te","x":0.75,"y":0.25,"z":0.75},{"e":"Te","x":0.75,"y":0.75,"z":0.25}]},{"name":"Оксид цинка","formula":"ZnO","aliases":[],"type":"covalent","system":"hexagonal","family":"вюрцит","a":3.25,"b":3.25,"c":5.21,"al":90,"be":90,"ga":120,"z":2,"coord":4,"desc":"Ковалентная гексагональная решётка типа вюрцита: тетраэдры в слоях.","atoms":[{"e":"Zn","x":0.3333333333333333,"y":0.6666666666666666,"z":0},{"e":"Zn","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5},{"e":"O","x":0.3333333333333333,"y":0.6666666666666666,"z":0.375},{"e":"O","x":0.6666666666666666,"y":0.3333333333333333,"z":0.875}]},{"name":"Сульфид цинка (вюрцит)","formula":"ZnS","aliases":[],"type":"covalent","system":"hexagonal","family":"вюрцит","a":3.82,"b":3.82,"c":6.26,"al":90,"be":90,"ga":120,"z":2,"coord":4,"desc":"Ковалентная гексагональная решётка типа вюрцита: тетраэдры в слоях.","atoms":[{"e":"Zn","x":0.3333333333333333,"y":0.6666666666666666,"z":0},{"e":"Zn","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5},{"e":"S","x":0.3333333333333333,"y":0.6666666666666666,"z":0.375},{"e":"S","x":0.6666666666666666,"y":0.3333333333333333,"z":0.875}]},{"name":"Сульфид кадмия (вюрцит)","formula":"CdS","aliases":[],"type":"covalent","system":"hexagonal","family":"вюрцит","a":4.14,"b":4.14,"c":6.72,"al":90,"be":90,"ga":120,"z":2,"coord":4,"desc":"Ковалентная гексагональная решётка типа вюрцита: тетраэдры в слоях.","atoms":[{"e":"Cd","x":0.3333333333333333,"y":0.6666666666666666,"z":0},{"e":"Cd","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5},{"e":"S","x":0.3333333333333333,"y":0.6666666666666666,"z":0.375},{"e":"S","x":0.6666666666666666,"y":0.3333333333333333,"z":0.875}]},{"name":"Селенид кадмия","formula":"CdSe","aliases":[],"type":"covalent","system":"hexagonal","family":"вюрцит","a":4.3,"b":4.3,"c":7.01,"al":90,"be":90,"ga":120,"z":2,"coord":4,"desc":"Ковалентная гексагональная решётка типа вюрцита: тетраэдры в слоях.","atoms":[{"e":"Cd","x":0.3333333333333333,"y":0.6666666666666666,"z":0},{"e":"Cd","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5},{"e":"Se","x":0.3333333333333333,"y":0.6666666666666666,"z":0.375},{"e":"Se","x":0.6666666666666666,"y":0.3333333333333333,"z":0.875}]},{"name":"Теллурид кадмия (вюрцит)","formula":"CdTe","aliases":[],"type":"covalent","system":"hexagonal","family":"вюрцит","a":4.57,"b":4.57,"c":7.47,"al":90,"be":90,"ga":120,"z":2,"coord":4,"desc":"Ковалентная гексагональная решётка типа вюрцита: тетраэдры в слоях.","atoms":[{"e":"Cd","x":0.3333333333333333,"y":0.6666666666666666,"z":0},{"e":"Cd","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5},{"e":"Te","x":0.3333333333333333,"y":0.6666666666666666,"z":0.375},{"e":"Te","x":0.6666666666666666,"y":0.3333333333333333,"z":0.875}]},{"name":"Нитрид галлия","formula":"GaN","aliases":[],"type":"covalent","system":"hexagonal","family":"вюрцит","a":3.19,"b":3.19,"c":5.19,"al":90,"be":90,"ga":120,"z":2,"coord":4,"desc":"Ковалентная гексагональная решётка типа вюрцита: тетраэдры в слоях.","atoms":[{"e":"Ga","x":0.3333333333333333,"y":0.6666666666666666,"z":0},{"e":"Ga","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5},{"e":"N","x":0.3333333333333333,"y":0.6666666666666666,"z":0.375},{"e":"N","x":0.6666666666666666,"y":0.3333333333333333,"z":0.875}]},{"name":"Нитрид алюминия","formula":"AlN","aliases":[],"type":"covalent","system":"hexagonal","family":"вюрцит","a":3.11,"b":3.11,"c":4.98,"al":90,"be":90,"ga":120,"z":2,"coord":4,"desc":"Ковалентная гексагональная решётка типа вюрцита: тетраэдры в слоях.","atoms":[{"e":"Al","x":0.3333333333333333,"y":0.6666666666666666,"z":0},{"e":"Al","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5},{"e":"N","x":0.3333333333333333,"y":0.6666666666666666,"z":0.375},{"e":"N","x":0.6666666666666666,"y":0.3333333333333333,"z":0.875}]},{"name":"Нитрид индия","formula":"InN","aliases":[],"type":"covalent","system":"hexagonal","family":"вюрцит","a":3.54,"b":3.54,"c":5.7,"al":90,"be":90,"ga":120,"z":2,"coord":4,"desc":"Ковалентная гексагональная решётка типа вюрцита: тетраэдры в слоях.","atoms":[{"e":"In","x":0.3333333333333333,"y":0.6666666666666666,"z":0},{"e":"In","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5},{"e":"N","x":0.3333333333333333,"y":0.6666666666666666,"z":0.375},{"e":"N","x":0.6666666666666666,"y":0.3333333333333333,"z":0.875}]},{"name":"Нитрид бора (гексагональный)","formula":"BN","aliases":[],"type":"covalent","system":"hexagonal","family":"вюрцит","a":2.5,"b":2.5,"c":6.66,"al":90,"be":90,"ga":120,"z":2,"coord":4,"desc":"Ковалентная гексагональная решётка типа вюрцита: тетраэдры в слоях.","atoms":[{"e":"B","x":0.3333333333333333,"y":0.6666666666666666,"z":0},{"e":"B","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5},{"e":"N","x":0.3333333333333333,"y":0.6666666666666666,"z":0.375},{"e":"N","x":0.6666666666666666,"y":0.3333333333333333,"z":0.875}]},{"name":"Карбид кремния (2H)","formula":"SiC","aliases":[],"type":"covalent","system":"hexagonal","family":"вюрцит","a":3.07,"b":3.07,"c":5.05,"al":90,"be":90,"ga":120,"z":2,"coord":4,"desc":"Ковалентная гексагональная решётка типа вюрцита: тетраэдры в слоях.","atoms":[{"e":"Si","x":0.3333333333333333,"y":0.6666666666666666,"z":0},{"e":"Si","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5},{"e":"C","x":0.3333333333333333,"y":0.6666666666666666,"z":0.375},{"e":"C","x":0.6666666666666666,"y":0.3333333333333333,"z":0.875}]},{"name":"Оксид бериллия","formula":"BeO","aliases":[],"type":"covalent","system":"hexagonal","family":"вюрцит","a":2.7,"b":2.7,"c":4.38,"al":90,"be":90,"ga":120,"z":2,"coord":4,"desc":"Ковалентная гексагональная решётка типа вюрцита: тетраэдры в слоях.","atoms":[{"e":"Be","x":0.3333333333333333,"y":0.6666666666666666,"z":0},{"e":"Be","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5},{"e":"O","x":0.3333333333333333,"y":0.6666666666666666,"z":0.375},{"e":"O","x":0.6666666666666666,"y":0.3333333333333333,"z":0.875}]},{"name":"Иодид серебра","formula":"AgI","aliases":[],"type":"covalent","system":"hexagonal","family":"вюрцит","a":4.59,"b":4.59,"c":7.51,"al":90,"be":90,"ga":120,"z":2,"coord":4,"desc":"Ковалентная гексагональная решётка типа вюрцита: тетраэдры в слоях.","atoms":[{"e":"Ag","x":0.3333333333333333,"y":0.6666666666666666,"z":0},{"e":"Ag","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5},{"e":"I","x":0.3333333333333333,"y":0.6666666666666666,"z":0.375},{"e":"I","x":0.6666666666666666,"y":0.3333333333333333,"z":0.875}]},{"name":"Сульфид магния (вюрцит)","formula":"MgS","aliases":[],"type":"covalent","system":"hexagonal","family":"вюрцит","a":3.98,"b":3.98,"c":6.45,"al":90,"be":90,"ga":120,"z":2,"coord":4,"desc":"Ковалентная гексагональная решётка типа вюрцита: тетраэдры в слоях.","atoms":[{"e":"Mg","x":0.3333333333333333,"y":0.6666666666666666,"z":0},{"e":"Mg","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5},{"e":"S","x":0.3333333333333333,"y":0.6666666666666666,"z":0.375},{"e":"S","x":0.6666666666666666,"y":0.3333333333333333,"z":0.875}]},{"name":"Сульфид марганца (вюрцит)","formula":"MnS","aliases":[],"type":"covalent","system":"hexagonal","family":"вюрцит","a":3.98,"b":3.98,"c":6.45,"al":90,"be":90,"ga":120,"z":2,"coord":4,"desc":"Ковалентная гексагональная решётка типа вюрцита: тетраэдры в слоях.","atoms":[{"e":"Mn","x":0.3333333333333333,"y":0.6666666666666666,"z":0},{"e":"Mn","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5},{"e":"S","x":0.3333333333333333,"y":0.6666666666666666,"z":0.375},{"e":"S","x":0.6666666666666666,"y":0.3333333333333333,"z":0.875}]},{"name":"Селенид марганца (вюрцит)","formula":"MnSe","aliases":[],"type":"covalent","system":"hexagonal","family":"вюрцит","a":4.12,"b":4.12,"c":6.73,"al":90,"be":90,"ga":120,"z":2,"coord":4,"desc":"Ковалентная гексагональная решётка типа вюрцита: тетраэдры в слоях.","atoms":[{"e":"Mn","x":0.3333333333333333,"y":0.6666666666666666,"z":0},{"e":"Mn","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5},{"e":"Se","x":0.3333333333333333,"y":0.6666666666666666,"z":0.375},{"e":"Se","x":0.6666666666666666,"y":0.3333333333333333,"z":0.875}]},{"name":"Теллурид марганца (вюрцит)","formula":"MnTe","aliases":[],"type":"covalent","system":"hexagonal","family":"вюрцит","a":4.33,"b":4.33,"c":7.08,"al":90,"be":90,"ga":120,"z":2,"coord":4,"desc":"Ковалентная гексагональная решётка типа вюрцита: тетраэдры в слоях.","atoms":[{"e":"Mn","x":0.3333333333333333,"y":0.6666666666666666,"z":0},{"e":"Mn","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5},{"e":"Te","x":0.3333333333333333,"y":0.6666666666666666,"z":0.375},{"e":"Te","x":0.6666666666666666,"y":0.3333333333333333,"z":0.875}]},{"name":"Селенид цинка (вюрцит)","formula":"ZnSe","aliases":[],"type":"covalent","system":"hexagonal","family":"вюрцит","a":3.98,"b":3.98,"c":6.53,"al":90,"be":90,"ga":120,"z":2,"coord":4,"desc":"Ковалентная гексагональная решётка типа вюрцита: тетраэдры в слоях.","atoms":[{"e":"Zn","x":0.3333333333333333,"y":0.6666666666666666,"z":0},{"e":"Zn","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5},{"e":"Se","x":0.3333333333333333,"y":0.6666666666666666,"z":0.375},{"e":"Se","x":0.6666666666666666,"y":0.3333333333333333,"z":0.875}]},{"name":"Арсенид галлия (вюрцит)","formula":"GaAs","aliases":[],"type":"covalent","system":"hexagonal","family":"вюрцит","a":3.99,"b":3.99,"c":6.55,"al":90,"be":90,"ga":120,"z":2,"coord":4,"desc":"Ковалентная гексагональная решётка типа вюрцита: тетраэдры в слоях.","atoms":[{"e":"Ga","x":0.3333333333333333,"y":0.6666666666666666,"z":0},{"e":"Ga","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5},{"e":"As","x":0.3333333333333333,"y":0.6666666666666666,"z":0.375},{"e":"As","x":0.6666666666666666,"y":0.3333333333333333,"z":0.875}]},{"name":"Фосфид индия (вюрцит)","formula":"InP","aliases":[],"type":"covalent","system":"hexagonal","family":"вюрцит","a":4.15,"b":4.15,"c":6.82,"al":90,"be":90,"ga":120,"z":2,"coord":4,"desc":"Ковалентная гексагональная решётка типа вюрцита: тетраэдры в слоях.","atoms":[{"e":"In","x":0.3333333333333333,"y":0.6666666666666666,"z":0},{"e":"In","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5},{"e":"P","x":0.3333333333333333,"y":0.6666666666666666,"z":0.375},{"e":"P","x":0.6666666666666666,"y":0.3333333333333333,"z":0.875}]},{"name":"Фторид кальция","formula":"CaF2","aliases":["флюорит","плавиковый шпат"],"type":"ionic","system":"cubic","family":"флюорит","a":5.46,"b":5.46,"c":5.46,"al":90,"be":90,"ga":90,"z":4,"coord":8,"desc":"Ионная решётка типа флюорита: катион окружён восемью анионами.","atoms":[{"e":"Ca","x":0,"y":0,"z":0},{"e":"Ca","x":0,"y":0.5,"z":0.5},{"e":"Ca","x":0.5,"y":0,"z":0.5},{"e":"Ca","x":0.5,"y":0.5,"z":0},{"e":"F","x":0.25,"y":0.25,"z":0.25},{"e":"F","x":0.25,"y":0.75,"z":0.75},{"e":"F","x":0.75,"y":0.25,"z":0.75},{"e":"F","x":0.75,"y":0.75,"z":0.25},{"e":"F","x":0.75,"y":0.75,"z":0.75},{"e":"F","x":0.75,"y":0.25,"z":0.25},{"e":"F","x":0.25,"y":0.75,"z":0.25},{"e":"F","x":0.25,"y":0.25,"z":0.75}]},{"name":"Фторид стронция","formula":"SrF2","aliases":[],"type":"ionic","system":"cubic","family":"флюорит","a":5.8,"b":5.8,"c":5.8,"al":90,"be":90,"ga":90,"z":4,"coord":8,"desc":"Ионная решётка типа флюорита: катион окружён восемью анионами.","atoms":[{"e":"Sr","x":0,"y":0,"z":0},{"e":"Sr","x":0,"y":0.5,"z":0.5},{"e":"Sr","x":0.5,"y":0,"z":0.5},{"e":"Sr","x":0.5,"y":0.5,"z":0},{"e":"F","x":0.25,"y":0.25,"z":0.25},{"e":"F","x":0.25,"y":0.75,"z":0.75},{"e":"F","x":0.75,"y":0.25,"z":0.75},{"e":"F","x":0.75,"y":0.75,"z":0.25},{"e":"F","x":0.75,"y":0.75,"z":0.75},{"e":"F","x":0.75,"y":0.25,"z":0.25},{"e":"F","x":0.25,"y":0.75,"z":0.25},{"e":"F","x":0.25,"y":0.25,"z":0.75}]},{"name":"Фторид бария","formula":"BaF2","aliases":[],"type":"ionic","system":"cubic","family":"флюорит","a":6.2,"b":6.2,"c":6.2,"al":90,"be":90,"ga":90,"z":4,"coord":8,"desc":"Ионная решётка типа флюорита: катион окружён восемью анионами.","atoms":[{"e":"Ba","x":0,"y":0,"z":0},{"e":"Ba","x":0,"y":0.5,"z":0.5},{"e":"Ba","x":0.5,"y":0,"z":0.5},{"e":"Ba","x":0.5,"y":0.5,"z":0},{"e":"F","x":0.25,"y":0.25,"z":0.25},{"e":"F","x":0.25,"y":0.75,"z":0.75},{"e":"F","x":0.75,"y":0.25,"z":0.75},{"e":"F","x":0.75,"y":0.75,"z":0.25},{"e":"F","x":0.75,"y":0.75,"z":0.75},{"e":"F","x":0.75,"y":0.25,"z":0.25},{"e":"F","x":0.25,"y":0.75,"z":0.25},{"e":"F","x":0.25,"y":0.25,"z":0.75}]},{"name":"Фторид кадмия","formula":"CdF2","aliases":[],"type":"ionic","system":"cubic","family":"флюорит","a":5.39,"b":5.39,"c":5.39,"al":90,"be":90,"ga":90,"z":4,"coord":8,"desc":"Ионная решётка типа флюорита: катион окружён восемью анионами.","atoms":[{"e":"Cd","x":0,"y":0,"z":0},{"e":"Cd","x":0,"y":0.5,"z":0.5},{"e":"Cd","x":0.5,"y":0,"z":0.5},{"e":"Cd","x":0.5,"y":0.5,"z":0},{"e":"F","x":0.25,"y":0.25,"z":0.25},{"e":"F","x":0.25,"y":0.75,"z":0.75},{"e":"F","x":0.75,"y":0.25,"z":0.75},{"e":"F","x":0.75,"y":0.75,"z":0.25},{"e":"F","x":0.75,"y":0.75,"z":0.75},{"e":"F","x":0.75,"y":0.25,"z":0.25},{"e":"F","x":0.25,"y":0.75,"z":0.25},{"e":"F","x":0.25,"y":0.25,"z":0.75}]},{"name":"Фторид свинца(II)","formula":"PbF2","aliases":[],"type":"ionic","system":"cubic","family":"флюорит","a":5.94,"b":5.94,"c":5.94,"al":90,"be":90,"ga":90,"z":4,"coord":8,"desc":"Ионная решётка типа флюорита: катион окружён восемью анионами.","atoms":[{"e":"Pb","x":0,"y":0,"z":0},{"e":"Pb","x":0,"y":0.5,"z":0.5},{"e":"Pb","x":0.5,"y":0,"z":0.5},{"e":"Pb","x":0.5,"y":0.5,"z":0},{"e":"F","x":0.25,"y":0.25,"z":0.25},{"e":"F","x":0.25,"y":0.75,"z":0.75},{"e":"F","x":0.75,"y":0.25,"z":0.75},{"e":"F","x":0.75,"y":0.75,"z":0.25},{"e":"F","x":0.75,"y":0.75,"z":0.75},{"e":"F","x":0.75,"y":0.25,"z":0.25},{"e":"F","x":0.25,"y":0.75,"z":0.25},{"e":"F","x":0.25,"y":0.25,"z":0.75}]},{"name":"Оксид церия(IV)","formula":"CeO2","aliases":[],"type":"ionic","system":"cubic","family":"флюорит","a":5.41,"b":5.41,"c":5.41,"al":90,"be":90,"ga":90,"z":4,"coord":8,"desc":"Ионная решётка типа флюорита: катион окружён восемью анионами.","atoms":[{"e":"Ce","x":0,"y":0,"z":0},{"e":"Ce","x":0,"y":0.5,"z":0.5},{"e":"Ce","x":0.5,"y":0,"z":0.5},{"e":"Ce","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.25,"y":0.25,"z":0.25},{"e":"O","x":0.25,"y":0.75,"z":0.75},{"e":"O","x":0.75,"y":0.25,"z":0.75},{"e":"O","x":0.75,"y":0.75,"z":0.25},{"e":"O","x":0.75,"y":0.75,"z":0.75},{"e":"O","x":0.75,"y":0.25,"z":0.25},{"e":"O","x":0.25,"y":0.75,"z":0.25},{"e":"O","x":0.25,"y":0.25,"z":0.75}]},{"name":"Оксид тория(IV)","formula":"ThO2","aliases":[],"type":"ionic","system":"cubic","family":"флюорит","a":5.6,"b":5.6,"c":5.6,"al":90,"be":90,"ga":90,"z":4,"coord":8,"desc":"Ионная решётка типа флюорита: катион окружён восемью анионами.","atoms":[{"e":"Th","x":0,"y":0,"z":0},{"e":"Th","x":0,"y":0.5,"z":0.5},{"e":"Th","x":0.5,"y":0,"z":0.5},{"e":"Th","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.25,"y":0.25,"z":0.25},{"e":"O","x":0.25,"y":0.75,"z":0.75},{"e":"O","x":0.75,"y":0.25,"z":0.75},{"e":"O","x":0.75,"y":0.75,"z":0.25},{"e":"O","x":0.75,"y":0.75,"z":0.75},{"e":"O","x":0.75,"y":0.25,"z":0.25},{"e":"O","x":0.25,"y":0.75,"z":0.25},{"e":"O","x":0.25,"y":0.25,"z":0.75}]},{"name":"Оксид урана(IV)","formula":"UO2","aliases":[],"type":"ionic","system":"cubic","family":"флюорит","a":5.47,"b":5.47,"c":5.47,"al":90,"be":90,"ga":90,"z":4,"coord":8,"desc":"Ионная решётка типа флюорита: катион окружён восемью анионами.","atoms":[{"e":"U","x":0,"y":0,"z":0},{"e":"U","x":0,"y":0.5,"z":0.5},{"e":"U","x":0.5,"y":0,"z":0.5},{"e":"U","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.25,"y":0.25,"z":0.25},{"e":"O","x":0.25,"y":0.75,"z":0.75},{"e":"O","x":0.75,"y":0.25,"z":0.75},{"e":"O","x":0.75,"y":0.75,"z":0.25},{"e":"O","x":0.75,"y":0.75,"z":0.75},{"e":"O","x":0.75,"y":0.25,"z":0.25},{"e":"O","x":0.25,"y":0.75,"z":0.25},{"e":"O","x":0.25,"y":0.25,"z":0.75}]},{"name":"Оксид циркония(IV)","formula":"ZrO2","aliases":[],"type":"ionic","system":"cubic","family":"флюорит","a":5.09,"b":5.09,"c":5.09,"al":90,"be":90,"ga":90,"z":4,"coord":8,"desc":"Ионная решётка типа флюорита: катион окружён восемью анионами.","atoms":[{"e":"Zr","x":0,"y":0,"z":0},{"e":"Zr","x":0,"y":0.5,"z":0.5},{"e":"Zr","x":0.5,"y":0,"z":0.5},{"e":"Zr","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.25,"y":0.25,"z":0.25},{"e":"O","x":0.25,"y":0.75,"z":0.75},{"e":"O","x":0.75,"y":0.25,"z":0.75},{"e":"O","x":0.75,"y":0.75,"z":0.25},{"e":"O","x":0.75,"y":0.75,"z":0.75},{"e":"O","x":0.75,"y":0.25,"z":0.25},{"e":"O","x":0.25,"y":0.75,"z":0.25},{"e":"O","x":0.25,"y":0.25,"z":0.75}]},{"name":"Оксид гафния(IV)","formula":"HfO2","aliases":[],"type":"ionic","system":"cubic","family":"флюорит","a":5.08,"b":5.08,"c":5.08,"al":90,"be":90,"ga":90,"z":4,"coord":8,"desc":"Ионная решётка типа флюорита: катион окружён восемью анионами.","atoms":[{"e":"Hf","x":0,"y":0,"z":0},{"e":"Hf","x":0,"y":0.5,"z":0.5},{"e":"Hf","x":0.5,"y":0,"z":0.5},{"e":"Hf","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.25,"y":0.25,"z":0.25},{"e":"O","x":0.25,"y":0.75,"z":0.75},{"e":"O","x":0.75,"y":0.25,"z":0.75},{"e":"O","x":0.75,"y":0.75,"z":0.25},{"e":"O","x":0.75,"y":0.75,"z":0.75},{"e":"O","x":0.75,"y":0.25,"z":0.25},{"e":"O","x":0.25,"y":0.75,"z":0.25},{"e":"O","x":0.25,"y":0.25,"z":0.75}]},{"name":"Оксид празеодима(IV)","formula":"PrO2","aliases":[],"type":"ionic","system":"cubic","family":"флюорит","a":5.39,"b":5.39,"c":5.39,"al":90,"be":90,"ga":90,"z":4,"coord":8,"desc":"Ионная решётка типа флюорита: катион окружён восемью анионами.","atoms":[{"e":"Pr","x":0,"y":0,"z":0},{"e":"Pr","x":0,"y":0.5,"z":0.5},{"e":"Pr","x":0.5,"y":0,"z":0.5},{"e":"Pr","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.25,"y":0.25,"z":0.25},{"e":"O","x":0.25,"y":0.75,"z":0.75},{"e":"O","x":0.75,"y":0.25,"z":0.75},{"e":"O","x":0.75,"y":0.75,"z":0.25},{"e":"O","x":0.75,"y":0.75,"z":0.75},{"e":"O","x":0.75,"y":0.25,"z":0.25},{"e":"O","x":0.25,"y":0.75,"z":0.25},{"e":"O","x":0.25,"y":0.25,"z":0.75}]},{"name":"Оксид тербия(IV)","formula":"TbO2","aliases":[],"type":"ionic","system":"cubic","family":"флюорит","a":5.36,"b":5.36,"c":5.36,"al":90,"be":90,"ga":90,"z":4,"coord":8,"desc":"Ионная решётка типа флюорита: катион окружён восемью анионами.","atoms":[{"e":"Tb","x":0,"y":0,"z":0},{"e":"Tb","x":0,"y":0.5,"z":0.5},{"e":"Tb","x":0.5,"y":0,"z":0.5},{"e":"Tb","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.25,"y":0.25,"z":0.25},{"e":"O","x":0.25,"y":0.75,"z":0.75},{"e":"O","x":0.75,"y":0.25,"z":0.75},{"e":"O","x":0.75,"y":0.75,"z":0.25},{"e":"O","x":0.75,"y":0.75,"z":0.75},{"e":"O","x":0.75,"y":0.25,"z":0.25},{"e":"O","x":0.25,"y":0.75,"z":0.25},{"e":"O","x":0.25,"y":0.25,"z":0.75}]},{"name":"Оксид нептуния(IV)","formula":"NpO2","aliases":[],"type":"ionic","system":"cubic","family":"флюорит","a":5.43,"b":5.43,"c":5.43,"al":90,"be":90,"ga":90,"z":4,"coord":8,"desc":"Ионная решётка типа флюорита: катион окружён восемью анионами.","atoms":[{"e":"Np","x":0,"y":0,"z":0},{"e":"Np","x":0,"y":0.5,"z":0.5},{"e":"Np","x":0.5,"y":0,"z":0.5},{"e":"Np","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.25,"y":0.25,"z":0.25},{"e":"O","x":0.25,"y":0.75,"z":0.75},{"e":"O","x":0.75,"y":0.25,"z":0.75},{"e":"O","x":0.75,"y":0.75,"z":0.25},{"e":"O","x":0.75,"y":0.75,"z":0.75},{"e":"O","x":0.75,"y":0.25,"z":0.25},{"e":"O","x":0.25,"y":0.75,"z":0.25},{"e":"O","x":0.25,"y":0.25,"z":0.75}]},{"name":"Оксид плутония(IV)","formula":"PuO2","aliases":[],"type":"ionic","system":"cubic","family":"флюорит","a":5.4,"b":5.4,"c":5.4,"al":90,"be":90,"ga":90,"z":4,"coord":8,"desc":"Ионная решётка типа флюорита: катион окружён восемью анионами.","atoms":[{"e":"Pu","x":0,"y":0,"z":0},{"e":"Pu","x":0,"y":0.5,"z":0.5},{"e":"Pu","x":0.5,"y":0,"z":0.5},{"e":"Pu","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.25,"y":0.25,"z":0.25},{"e":"O","x":0.25,"y":0.75,"z":0.75},{"e":"O","x":0.75,"y":0.25,"z":0.75},{"e":"O","x":0.75,"y":0.75,"z":0.25},{"e":"O","x":0.75,"y":0.75,"z":0.75},{"e":"O","x":0.75,"y":0.25,"z":0.25},{"e":"O","x":0.25,"y":0.75,"z":0.25},{"e":"O","x":0.25,"y":0.25,"z":0.75}]},{"name":"Оксид лития","formula":"Li2O","aliases":[],"type":"ionic","system":"cubic","family":"антифлюорит","a":4.61,"b":4.61,"c":4.61,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Обратная структура флюорита: анионы образуют ГЦК, катионы — тетраэдрические пустоты.","atoms":[{"e":"O","x":0,"y":0,"z":0},{"e":"O","x":0,"y":0.5,"z":0.5},{"e":"O","x":0.5,"y":0,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0},{"e":"Li","x":0.25,"y":0.25,"z":0.25},{"e":"Li","x":0.25,"y":0.75,"z":0.75},{"e":"Li","x":0.75,"y":0.25,"z":0.75},{"e":"Li","x":0.75,"y":0.75,"z":0.25},{"e":"Li","x":0.75,"y":0.75,"z":0.75},{"e":"Li","x":0.75,"y":0.25,"z":0.25},{"e":"Li","x":0.25,"y":0.75,"z":0.25},{"e":"Li","x":0.25,"y":0.25,"z":0.75}]},{"name":"Оксид натрия","formula":"Na2O","aliases":[],"type":"ionic","system":"cubic","family":"антифлюорит","a":5.55,"b":5.55,"c":5.55,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Обратная структура флюорита: анионы образуют ГЦК, катионы — тетраэдрические пустоты.","atoms":[{"e":"O","x":0,"y":0,"z":0},{"e":"O","x":0,"y":0.5,"z":0.5},{"e":"O","x":0.5,"y":0,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0},{"e":"Na","x":0.25,"y":0.25,"z":0.25},{"e":"Na","x":0.25,"y":0.75,"z":0.75},{"e":"Na","x":0.75,"y":0.25,"z":0.75},{"e":"Na","x":0.75,"y":0.75,"z":0.25},{"e":"Na","x":0.75,"y":0.75,"z":0.75},{"e":"Na","x":0.75,"y":0.25,"z":0.25},{"e":"Na","x":0.25,"y":0.75,"z":0.25},{"e":"Na","x":0.25,"y":0.25,"z":0.75}]},{"name":"Оксид калия","formula":"K2O","aliases":[],"type":"ionic","system":"cubic","family":"антифлюорит","a":6.44,"b":6.44,"c":6.44,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Обратная структура флюорита: анионы образуют ГЦК, катионы — тетраэдрические пустоты.","atoms":[{"e":"O","x":0,"y":0,"z":0},{"e":"O","x":0,"y":0.5,"z":0.5},{"e":"O","x":0.5,"y":0,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0},{"e":"K","x":0.25,"y":0.25,"z":0.25},{"e":"K","x":0.25,"y":0.75,"z":0.75},{"e":"K","x":0.75,"y":0.25,"z":0.75},{"e":"K","x":0.75,"y":0.75,"z":0.25},{"e":"K","x":0.75,"y":0.75,"z":0.75},{"e":"K","x":0.75,"y":0.25,"z":0.25},{"e":"K","x":0.25,"y":0.75,"z":0.25},{"e":"K","x":0.25,"y":0.25,"z":0.75}]},{"name":"Оксид рубидия","formula":"Rb2O","aliases":[],"type":"ionic","system":"cubic","family":"антифлюорит","a":6.74,"b":6.74,"c":6.74,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Обратная структура флюорита: анионы образуют ГЦК, катионы — тетраэдрические пустоты.","atoms":[{"e":"O","x":0,"y":0,"z":0},{"e":"O","x":0,"y":0.5,"z":0.5},{"e":"O","x":0.5,"y":0,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0},{"e":"Rb","x":0.25,"y":0.25,"z":0.25},{"e":"Rb","x":0.25,"y":0.75,"z":0.75},{"e":"Rb","x":0.75,"y":0.25,"z":0.75},{"e":"Rb","x":0.75,"y":0.75,"z":0.25},{"e":"Rb","x":0.75,"y":0.75,"z":0.75},{"e":"Rb","x":0.75,"y":0.25,"z":0.25},{"e":"Rb","x":0.25,"y":0.75,"z":0.25},{"e":"Rb","x":0.25,"y":0.25,"z":0.75}]},{"name":"Оксид цезия","formula":"Cs2O","aliases":[],"type":"ionic","system":"cubic","family":"антифлюорит","a":7.06,"b":7.06,"c":7.06,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Обратная структура флюорита: анионы образуют ГЦК, катионы — тетраэдрические пустоты.","atoms":[{"e":"O","x":0,"y":0,"z":0},{"e":"O","x":0,"y":0.5,"z":0.5},{"e":"O","x":0.5,"y":0,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0},{"e":"Cs","x":0.25,"y":0.25,"z":0.25},{"e":"Cs","x":0.25,"y":0.75,"z":0.75},{"e":"Cs","x":0.75,"y":0.25,"z":0.75},{"e":"Cs","x":0.75,"y":0.75,"z":0.25},{"e":"Cs","x":0.75,"y":0.75,"z":0.75},{"e":"Cs","x":0.75,"y":0.25,"z":0.25},{"e":"Cs","x":0.25,"y":0.75,"z":0.25},{"e":"Cs","x":0.25,"y":0.25,"z":0.75}]},{"name":"Сульфид натрия","formula":"Na2S","aliases":[],"type":"ionic","system":"cubic","family":"антифлюорит","a":6.18,"b":6.18,"c":6.18,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Обратная структура флюорита: анионы образуют ГЦК, катионы — тетраэдрические пустоты.","atoms":[{"e":"S","x":0,"y":0,"z":0},{"e":"S","x":0,"y":0.5,"z":0.5},{"e":"S","x":0.5,"y":0,"z":0.5},{"e":"S","x":0.5,"y":0.5,"z":0},{"e":"Na","x":0.25,"y":0.25,"z":0.25},{"e":"Na","x":0.25,"y":0.75,"z":0.75},{"e":"Na","x":0.75,"y":0.25,"z":0.75},{"e":"Na","x":0.75,"y":0.75,"z":0.25},{"e":"Na","x":0.75,"y":0.75,"z":0.75},{"e":"Na","x":0.75,"y":0.25,"z":0.25},{"e":"Na","x":0.25,"y":0.75,"z":0.25},{"e":"Na","x":0.25,"y":0.25,"z":0.75}]},{"name":"Сульфид калия","formula":"K2S","aliases":[],"type":"ionic","system":"cubic","family":"антифлюорит","a":6.68,"b":6.68,"c":6.68,"al":90,"be":90,"ga":90,"z":4,"coord":4,"desc":"Обратная структура флюорита: анионы образуют ГЦК, катионы — тетраэдрические пустоты.","atoms":[{"e":"S","x":0,"y":0,"z":0},{"e":"S","x":0,"y":0.5,"z":0.5},{"e":"S","x":0.5,"y":0,"z":0.5},{"e":"S","x":0.5,"y":0.5,"z":0},{"e":"K","x":0.25,"y":0.25,"z":0.25},{"e":"K","x":0.25,"y":0.75,"z":0.75},{"e":"K","x":0.75,"y":0.25,"z":0.75},{"e":"K","x":0.75,"y":0.75,"z":0.25},{"e":"K","x":0.75,"y":0.75,"z":0.75},{"e":"K","x":0.75,"y":0.25,"z":0.25},{"e":"K","x":0.25,"y":0.75,"z":0.25},{"e":"K","x":0.25,"y":0.25,"z":0.75}]},{"name":"Алмаз","formula":"C","aliases":["алмаз"],"type":"covalent","system":"cubic","family":"алмаз","a":3.567,"b":3.567,"c":3.567,"al":90,"be":90,"ga":90,"z":8,"coord":4,"desc":"Атомная решётка алмаза: каждый атом связан с четырьмя соседями.","atoms":[{"e":"C","x":0,"y":0,"z":0},{"e":"C","x":0,"y":0.5,"z":0.5},{"e":"C","x":0.5,"y":0,"z":0.5},{"e":"C","x":0.5,"y":0.5,"z":0},{"e":"C","x":0.25,"y":0.25,"z":0.25},{"e":"C","x":0.25,"y":0.75,"z":0.75},{"e":"C","x":0.75,"y":0.25,"z":0.75},{"e":"C","x":0.75,"y":0.75,"z":0.25}]},{"name":"Кремний","formula":"Si","aliases":[],"type":"covalent","system":"cubic","family":"алмаз","a":5.431,"b":5.431,"c":5.431,"al":90,"be":90,"ga":90,"z":8,"coord":4,"desc":"Атомная решётка алмаза: каждый атом связан с четырьмя соседями.","atoms":[{"e":"Si","x":0,"y":0,"z":0},{"e":"Si","x":0,"y":0.5,"z":0.5},{"e":"Si","x":0.5,"y":0,"z":0.5},{"e":"Si","x":0.5,"y":0.5,"z":0},{"e":"Si","x":0.25,"y":0.25,"z":0.25},{"e":"Si","x":0.25,"y":0.75,"z":0.75},{"e":"Si","x":0.75,"y":0.25,"z":0.75},{"e":"Si","x":0.75,"y":0.75,"z":0.25}]},{"name":"Германий","formula":"Ge","aliases":[],"type":"covalent","system":"cubic","family":"алмаз","a":5.658,"b":5.658,"c":5.658,"al":90,"be":90,"ga":90,"z":8,"coord":4,"desc":"Атомная решётка алмаза: каждый атом связан с четырьмя соседями.","atoms":[{"e":"Ge","x":0,"y":0,"z":0},{"e":"Ge","x":0,"y":0.5,"z":0.5},{"e":"Ge","x":0.5,"y":0,"z":0.5},{"e":"Ge","x":0.5,"y":0.5,"z":0},{"e":"Ge","x":0.25,"y":0.25,"z":0.25},{"e":"Ge","x":0.25,"y":0.75,"z":0.75},{"e":"Ge","x":0.75,"y":0.25,"z":0.75},{"e":"Ge","x":0.75,"y":0.75,"z":0.25}]},{"name":"Серое олово","formula":"Sn","aliases":[],"type":"covalent","system":"cubic","family":"алмаз","a":6.489,"b":6.489,"c":6.489,"al":90,"be":90,"ga":90,"z":8,"coord":4,"desc":"Атомная решётка алмаза: каждый атом связан с четырьмя соседями.","atoms":[{"e":"Sn","x":0,"y":0,"z":0},{"e":"Sn","x":0,"y":0.5,"z":0.5},{"e":"Sn","x":0.5,"y":0,"z":0.5},{"e":"Sn","x":0.5,"y":0.5,"z":0},{"e":"Sn","x":0.25,"y":0.25,"z":0.25},{"e":"Sn","x":0.25,"y":0.75,"z":0.75},{"e":"Sn","x":0.75,"y":0.25,"z":0.75},{"e":"Sn","x":0.75,"y":0.75,"z":0.25}]},{"name":"Титанат кальция","formula":"CaTiO3","aliases":[],"type":"ionic","system":"cubic","family":"перовскит","a":3.82,"b":3.82,"c":3.82,"al":90,"be":90,"ga":90,"z":1,"coord":6,"desc":"Каркасная структура перовскита: октаэдры вокруг катиона B.","atoms":[{"e":"Ca","x":0,"y":0,"z":0},{"e":"Ti","x":0.5,"y":0.5,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0.5},{"e":"O","x":0,"y":0.5,"z":0.5}]},{"name":"Титанат стронция","formula":"SrTiO3","aliases":[],"type":"ionic","system":"cubic","family":"перовскит","a":3.905,"b":3.905,"c":3.905,"al":90,"be":90,"ga":90,"z":1,"coord":6,"desc":"Каркасная структура перовскита: октаэдры вокруг катиона B.","atoms":[{"e":"Sr","x":0,"y":0,"z":0},{"e":"Ti","x":0.5,"y":0.5,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0.5},{"e":"O","x":0,"y":0.5,"z":0.5}]},{"name":"Титанат бария","formula":"BaTiO3","aliases":[],"type":"ionic","system":"cubic","family":"перовскит","a":4.01,"b":4.01,"c":4.01,"al":90,"be":90,"ga":90,"z":1,"coord":6,"desc":"Каркасная структура перовскита: октаэдры вокруг катиона B.","atoms":[{"e":"Ba","x":0,"y":0,"z":0},{"e":"Ti","x":0.5,"y":0.5,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0.5},{"e":"O","x":0,"y":0.5,"z":0.5}]},{"name":"Титанат свинца","formula":"PbTiO3","aliases":[],"type":"ionic","system":"cubic","family":"перовскит","a":3.97,"b":3.97,"c":3.97,"al":90,"be":90,"ga":90,"z":1,"coord":6,"desc":"Каркасная структура перовскита: октаэдры вокруг катиона B.","atoms":[{"e":"Pb","x":0,"y":0,"z":0},{"e":"Ti","x":0.5,"y":0.5,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0.5},{"e":"O","x":0,"y":0.5,"z":0.5}]},{"name":"Манганит лантана","formula":"LaMnO3","aliases":[],"type":"ionic","system":"cubic","family":"перовскит","a":3.88,"b":3.88,"c":3.88,"al":90,"be":90,"ga":90,"z":1,"coord":6,"desc":"Каркасная структура перовскита: октаэдры вокруг катиона B.","atoms":[{"e":"La","x":0,"y":0,"z":0},{"e":"Mn","x":0.5,"y":0.5,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0.5},{"e":"O","x":0,"y":0.5,"z":0.5}]},{"name":"Кобальтит лантана","formula":"LaCoO3","aliases":[],"type":"ionic","system":"cubic","family":"перовскит","a":3.82,"b":3.82,"c":3.82,"al":90,"be":90,"ga":90,"z":1,"coord":6,"desc":"Каркасная структура перовскита: октаэдры вокруг катиона B.","atoms":[{"e":"La","x":0,"y":0,"z":0},{"e":"Co","x":0.5,"y":0.5,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0.5},{"e":"O","x":0,"y":0.5,"z":0.5}]},{"name":"Феррит лантана","formula":"LaFeO3","aliases":[],"type":"ionic","system":"cubic","family":"перовскит","a":3.93,"b":3.93,"c":3.93,"al":90,"be":90,"ga":90,"z":1,"coord":6,"desc":"Каркасная структура перовскита: октаэдры вокруг катиона B.","atoms":[{"e":"La","x":0,"y":0,"z":0},{"e":"Fe","x":0.5,"y":0.5,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0.5},{"e":"O","x":0,"y":0.5,"z":0.5}]},{"name":"Хромит лантана","formula":"LaCrO3","aliases":[],"type":"ionic","system":"cubic","family":"перовскит","a":3.88,"b":3.88,"c":3.88,"al":90,"be":90,"ga":90,"z":1,"coord":6,"desc":"Каркасная структура перовскита: октаэдры вокруг катиона B.","atoms":[{"e":"La","x":0,"y":0,"z":0},{"e":"Cr","x":0.5,"y":0.5,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0.5},{"e":"O","x":0,"y":0.5,"z":0.5}]},{"name":"Фторид калия-никеля","formula":"KNiF3","aliases":[],"type":"ionic","system":"cubic","family":"перовскит","a":4.01,"b":4.01,"c":4.01,"al":90,"be":90,"ga":90,"z":1,"coord":6,"desc":"Каркасная структура перовскита: октаэдры вокруг катиона B.","atoms":[{"e":"K","x":0,"y":0,"z":0},{"e":"Ni","x":0.5,"y":0.5,"z":0.5},{"e":"F","x":0.5,"y":0.5,"z":0},{"e":"F","x":0.5,"y":0,"z":0.5},{"e":"F","x":0,"y":0.5,"z":0.5}]},{"name":"Фторид калия-магния","formula":"KMgF3","aliases":[],"type":"ionic","system":"cubic","family":"перовскит","a":3.99,"b":3.99,"c":3.99,"al":90,"be":90,"ga":90,"z":1,"coord":6,"desc":"Каркасная структура перовскита: октаэдры вокруг катиона B.","atoms":[{"e":"K","x":0,"y":0,"z":0},{"e":"Mg","x":0.5,"y":0.5,"z":0.5},{"e":"F","x":0.5,"y":0.5,"z":0},{"e":"F","x":0.5,"y":0,"z":0.5},{"e":"F","x":0,"y":0.5,"z":0.5}]},{"name":"Цирконат стронция","formula":"SrZrO3","aliases":[],"type":"ionic","system":"cubic","family":"перовскит","a":4.1,"b":4.1,"c":4.1,"al":90,"be":90,"ga":90,"z":1,"coord":6,"desc":"Каркасная структура перовскита: октаэдры вокруг катиона B.","atoms":[{"e":"Sr","x":0,"y":0,"z":0},{"e":"Zr","x":0.5,"y":0.5,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0.5},{"e":"O","x":0,"y":0.5,"z":0.5}]},{"name":"Цирконат бария","formula":"BaZrO3","aliases":[],"type":"ionic","system":"cubic","family":"перовскит","a":4.19,"b":4.19,"c":4.19,"al":90,"be":90,"ga":90,"z":1,"coord":6,"desc":"Каркасная структура перовскита: октаэдры вокруг катиона B.","atoms":[{"e":"Ba","x":0,"y":0,"z":0},{"e":"Zr","x":0.5,"y":0.5,"z":0.5},{"e":"O","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.5,"y":0,"z":0.5},{"e":"O","x":0,"y":0.5,"z":0.5}]},{"name":"Диоксид титана (рутил)","formula":"TiO2","aliases":["рутил"],"type":"ionic","system":"tetragonal","family":"рутил","a":4.594,"b":4.594,"c":2.959,"al":90,"be":90,"ga":90,"z":2,"coord":6,"desc":"Тетрагональная структура рутила: цепочки октаэдров.","atoms":[{"e":"Ti","x":0,"y":0,"z":0},{"e":"Ti","x":0.5,"y":0.5,"z":0.5},{"e":"O","x":0.305,"y":0.305,"z":0},{"e":"O","x":0.6950000000000001,"y":0.6950000000000001,"z":0},{"e":"O","x":0.8049999999999999,"y":0.195,"z":0.5},{"e":"O","x":0.195,"y":0.8049999999999999,"z":0.5}]},{"name":"Диоксид олова","formula":"SnO2","aliases":[],"type":"ionic","system":"tetragonal","family":"рутил","a":4.737,"b":4.737,"c":3.186,"al":90,"be":90,"ga":90,"z":2,"coord":6,"desc":"Тетрагональная структура рутила: цепочки октаэдров.","atoms":[{"e":"Sn","x":0,"y":0,"z":0},{"e":"Sn","x":0.5,"y":0.5,"z":0.5},{"e":"O","x":0.305,"y":0.305,"z":0},{"e":"O","x":0.6950000000000001,"y":0.6950000000000001,"z":0},{"e":"O","x":0.8049999999999999,"y":0.195,"z":0.5},{"e":"O","x":0.195,"y":0.8049999999999999,"z":0.5}]},{"name":"Диоксид германия","formula":"GeO2","aliases":[],"type":"ionic","system":"tetragonal","family":"рутил","a":4.4,"b":4.4,"c":2.86,"al":90,"be":90,"ga":90,"z":2,"coord":6,"desc":"Тетрагональная структура рутила: цепочки октаэдров.","atoms":[{"e":"Ge","x":0,"y":0,"z":0},{"e":"Ge","x":0.5,"y":0.5,"z":0.5},{"e":"O","x":0.305,"y":0.305,"z":0},{"e":"O","x":0.6950000000000001,"y":0.6950000000000001,"z":0},{"e":"O","x":0.8049999999999999,"y":0.195,"z":0.5},{"e":"O","x":0.195,"y":0.8049999999999999,"z":0.5}]},{"name":"Диоксид марганца","formula":"MnO2","aliases":[],"type":"ionic","system":"tetragonal","family":"рутил","a":4.4,"b":4.4,"c":2.87,"al":90,"be":90,"ga":90,"z":2,"coord":6,"desc":"Тетрагональная структура рутила: цепочки октаэдров.","atoms":[{"e":"Mn","x":0,"y":0,"z":0},{"e":"Mn","x":0.5,"y":0.5,"z":0.5},{"e":"O","x":0.305,"y":0.305,"z":0},{"e":"O","x":0.6950000000000001,"y":0.6950000000000001,"z":0},{"e":"O","x":0.8049999999999999,"y":0.195,"z":0.5},{"e":"O","x":0.195,"y":0.8049999999999999,"z":0.5}]},{"name":"Диоксид свинца","formula":"PbO2","aliases":[],"type":"ionic","system":"tetragonal","family":"рутил","a":4.95,"b":4.95,"c":3.38,"al":90,"be":90,"ga":90,"z":2,"coord":6,"desc":"Тетрагональная структура рутила: цепочки октаэдров.","atoms":[{"e":"Pb","x":0,"y":0,"z":0},{"e":"Pb","x":0.5,"y":0.5,"z":0.5},{"e":"O","x":0.305,"y":0.305,"z":0},{"e":"O","x":0.6950000000000001,"y":0.6950000000000001,"z":0},{"e":"O","x":0.8049999999999999,"y":0.195,"z":0.5},{"e":"O","x":0.195,"y":0.8049999999999999,"z":0.5}]},{"name":"Диоксид ванадия","formula":"VO2","aliases":[],"type":"ionic","system":"tetragonal","family":"рутил","a":4.55,"b":4.55,"c":2.85,"al":90,"be":90,"ga":90,"z":2,"coord":6,"desc":"Тетрагональная структура рутила: цепочки октаэдров.","atoms":[{"e":"V","x":0,"y":0,"z":0},{"e":"V","x":0.5,"y":0.5,"z":0.5},{"e":"O","x":0.305,"y":0.305,"z":0},{"e":"O","x":0.6950000000000001,"y":0.6950000000000001,"z":0},{"e":"O","x":0.8049999999999999,"y":0.195,"z":0.5},{"e":"O","x":0.195,"y":0.8049999999999999,"z":0.5}]},{"name":"Диоксид ниобия","formula":"NbO2","aliases":[],"type":"ionic","system":"tetragonal","family":"рутил","a":4.7,"b":4.7,"c":3.06,"al":90,"be":90,"ga":90,"z":2,"coord":6,"desc":"Тетрагональная структура рутила: цепочки октаэдров.","atoms":[{"e":"Nb","x":0,"y":0,"z":0},{"e":"Nb","x":0.5,"y":0.5,"z":0.5},{"e":"O","x":0.305,"y":0.305,"z":0},{"e":"O","x":0.6950000000000001,"y":0.6950000000000001,"z":0},{"e":"O","x":0.8049999999999999,"y":0.195,"z":0.5},{"e":"O","x":0.195,"y":0.8049999999999999,"z":0.5}]},{"name":"Диоксид молибдена","formula":"MoO2","aliases":[],"type":"ionic","system":"tetragonal","family":"рутил","a":4.86,"b":4.86,"c":2.79,"al":90,"be":90,"ga":90,"z":2,"coord":6,"desc":"Тетрагональная структура рутила: цепочки октаэдров.","atoms":[{"e":"Mo","x":0,"y":0,"z":0},{"e":"Mo","x":0.5,"y":0.5,"z":0.5},{"e":"O","x":0.305,"y":0.305,"z":0},{"e":"O","x":0.6950000000000001,"y":0.6950000000000001,"z":0},{"e":"O","x":0.8049999999999999,"y":0.195,"z":0.5},{"e":"O","x":0.195,"y":0.8049999999999999,"z":0.5}]},{"name":"Диоксид вольфрама","formula":"WO2","aliases":[],"type":"ionic","system":"tetragonal","family":"рутил","a":4.9,"b":4.9,"c":2.8,"al":90,"be":90,"ga":90,"z":2,"coord":6,"desc":"Тетрагональная структура рутила: цепочки октаэдров.","atoms":[{"e":"W","x":0,"y":0,"z":0},{"e":"W","x":0.5,"y":0.5,"z":0.5},{"e":"O","x":0.305,"y":0.305,"z":0},{"e":"O","x":0.6950000000000001,"y":0.6950000000000001,"z":0},{"e":"O","x":0.8049999999999999,"y":0.195,"z":0.5},{"e":"O","x":0.195,"y":0.8049999999999999,"z":0.5}]},{"name":"Фторид магния","formula":"MgF2","aliases":[],"type":"ionic","system":"tetragonal","family":"рутил","a":4.62,"b":4.62,"c":3.05,"al":90,"be":90,"ga":90,"z":2,"coord":6,"desc":"Тетрагональная структура рутила: цепочки октаэдров.","atoms":[{"e":"Mg","x":0,"y":0,"z":0},{"e":"Mg","x":0.5,"y":0.5,"z":0.5},{"e":"F","x":0.305,"y":0.305,"z":0},{"e":"F","x":0.6950000000000001,"y":0.6950000000000001,"z":0},{"e":"F","x":0.8049999999999999,"y":0.195,"z":0.5},{"e":"F","x":0.195,"y":0.8049999999999999,"z":0.5}]},{"name":"Фторид цинка","formula":"ZnF2","aliases":[],"type":"ionic","system":"tetragonal","family":"рутил","a":4.7,"b":4.7,"c":3.13,"al":90,"be":90,"ga":90,"z":2,"coord":6,"desc":"Тетрагональная структура рутила: цепочки октаэдров.","atoms":[{"e":"Zn","x":0,"y":0,"z":0},{"e":"Zn","x":0.5,"y":0.5,"z":0.5},{"e":"F","x":0.305,"y":0.305,"z":0},{"e":"F","x":0.6950000000000001,"y":0.6950000000000001,"z":0},{"e":"F","x":0.8049999999999999,"y":0.195,"z":0.5},{"e":"F","x":0.195,"y":0.8049999999999999,"z":0.5}]},{"name":"Фторид никеля","formula":"NiF2","aliases":[],"type":"ionic","system":"tetragonal","family":"рутил","a":4.65,"b":4.65,"c":3.08,"al":90,"be":90,"ga":90,"z":2,"coord":6,"desc":"Тетрагональная структура рутила: цепочки октаэдров.","atoms":[{"e":"Ni","x":0,"y":0,"z":0},{"e":"Ni","x":0.5,"y":0.5,"z":0.5},{"e":"F","x":0.305,"y":0.305,"z":0},{"e":"F","x":0.6950000000000001,"y":0.6950000000000001,"z":0},{"e":"F","x":0.8049999999999999,"y":0.195,"z":0.5},{"e":"F","x":0.195,"y":0.8049999999999999,"z":0.5}]},{"name":"Графит","formula":"C","aliases":[],"type":"covalent","system":"hexagonal","family":"графит","a":2.46,"b":2.46,"c":6.71,"al":90,"be":90,"ga":120,"z":4,"coord":3,"desc":"Слоистая гексагональная решётка: слои связаны слабыми силами.","atoms":[{"e":"C","x":0,"y":0,"z":0},{"e":"C","x":0,"y":0,"z":0.5},{"e":"C","x":0.3333333333333333,"y":0.6666666666666666,"z":0},{"e":"C","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5}]},{"name":"Нитрид бора (графитоподобный)","formula":"BN","aliases":[],"type":"covalent","system":"hexagonal","family":"графит","a":2.5,"b":2.5,"c":6.66,"al":90,"be":90,"ga":120,"z":4,"coord":3,"desc":"Слоистая гексагональная решётка: слои связаны слабыми силами.","atoms":[{"e":"B","x":0,"y":0,"z":0},{"e":"N","x":0,"y":0,"z":0.5},{"e":"B","x":0.3333333333333333,"y":0.6666666666666666,"z":0},{"e":"N","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5}]},{"name":"Медь","formula":"Cu","aliases":[],"type":"metallic","system":"cubic","family":"ГЦК","a":3.615,"b":3.615,"c":3.615,"al":90,"be":90,"ga":90,"z":4,"coord":12,"desc":"Металлическая гранецентрированная кубическая решётка, КЧ 12.","atoms":[{"e":"Cu","x":0,"y":0,"z":0},{"e":"Cu","x":0,"y":0.5,"z":0.5},{"e":"Cu","x":0.5,"y":0,"z":0.5},{"e":"Cu","x":0.5,"y":0.5,"z":0}]},{"name":"Серебро","formula":"Ag","aliases":[],"type":"metallic","system":"cubic","family":"ГЦК","a":4.085,"b":4.085,"c":4.085,"al":90,"be":90,"ga":90,"z":4,"coord":12,"desc":"Металлическая гранецентрированная кубическая решётка, КЧ 12.","atoms":[{"e":"Ag","x":0,"y":0,"z":0},{"e":"Ag","x":0,"y":0.5,"z":0.5},{"e":"Ag","x":0.5,"y":0,"z":0.5},{"e":"Ag","x":0.5,"y":0.5,"z":0}]},{"name":"Золото","formula":"Au","aliases":[],"type":"metallic","system":"cubic","family":"ГЦК","a":4.078,"b":4.078,"c":4.078,"al":90,"be":90,"ga":90,"z":4,"coord":12,"desc":"Металлическая гранецентрированная кубическая решётка, КЧ 12.","atoms":[{"e":"Au","x":0,"y":0,"z":0},{"e":"Au","x":0,"y":0.5,"z":0.5},{"e":"Au","x":0.5,"y":0,"z":0.5},{"e":"Au","x":0.5,"y":0.5,"z":0}]},{"name":"Алюминий","formula":"Al","aliases":[],"type":"metallic","system":"cubic","family":"ГЦК","a":4.049,"b":4.049,"c":4.049,"al":90,"be":90,"ga":90,"z":4,"coord":12,"desc":"Металлическая гранецентрированная кубическая решётка, КЧ 12.","atoms":[{"e":"Al","x":0,"y":0,"z":0},{"e":"Al","x":0,"y":0.5,"z":0.5},{"e":"Al","x":0.5,"y":0,"z":0.5},{"e":"Al","x":0.5,"y":0.5,"z":0}]},{"name":"Никель","formula":"Ni","aliases":[],"type":"metallic","system":"cubic","family":"ГЦК","a":3.524,"b":3.524,"c":3.524,"al":90,"be":90,"ga":90,"z":4,"coord":12,"desc":"Металлическая гранецентрированная кубическая решётка, КЧ 12.","atoms":[{"e":"Ni","x":0,"y":0,"z":0},{"e":"Ni","x":0,"y":0.5,"z":0.5},{"e":"Ni","x":0.5,"y":0,"z":0.5},{"e":"Ni","x":0.5,"y":0.5,"z":0}]},{"name":"Свинец","formula":"Pb","aliases":[],"type":"metallic","system":"cubic","family":"ГЦК","a":4.951,"b":4.951,"c":4.951,"al":90,"be":90,"ga":90,"z":4,"coord":12,"desc":"Металлическая гранецентрированная кубическая решётка, КЧ 12.","atoms":[{"e":"Pb","x":0,"y":0,"z":0},{"e":"Pb","x":0,"y":0.5,"z":0.5},{"e":"Pb","x":0.5,"y":0,"z":0.5},{"e":"Pb","x":0.5,"y":0.5,"z":0}]},{"name":"Платина","formula":"Pt","aliases":[],"type":"metallic","system":"cubic","family":"ГЦК","a":3.924,"b":3.924,"c":3.924,"al":90,"be":90,"ga":90,"z":4,"coord":12,"desc":"Металлическая гранецентрированная кубическая решётка, КЧ 12.","atoms":[{"e":"Pt","x":0,"y":0,"z":0},{"e":"Pt","x":0,"y":0.5,"z":0.5},{"e":"Pt","x":0.5,"y":0,"z":0.5},{"e":"Pt","x":0.5,"y":0.5,"z":0}]},{"name":"Палладий","formula":"Pd","aliases":[],"type":"metallic","system":"cubic","family":"ГЦК","a":3.89,"b":3.89,"c":3.89,"al":90,"be":90,"ga":90,"z":4,"coord":12,"desc":"Металлическая гранецентрированная кубическая решётка, КЧ 12.","atoms":[{"e":"Pd","x":0,"y":0,"z":0},{"e":"Pd","x":0,"y":0.5,"z":0.5},{"e":"Pd","x":0.5,"y":0,"z":0.5},{"e":"Pd","x":0.5,"y":0.5,"z":0}]},{"name":"Родий","formula":"Rh","aliases":[],"type":"metallic","system":"cubic","family":"ГЦК","a":3.803,"b":3.803,"c":3.803,"al":90,"be":90,"ga":90,"z":4,"coord":12,"desc":"Металлическая гранецентрированная кубическая решётка, КЧ 12.","atoms":[{"e":"Rh","x":0,"y":0,"z":0},{"e":"Rh","x":0,"y":0.5,"z":0.5},{"e":"Rh","x":0.5,"y":0,"z":0.5},{"e":"Rh","x":0.5,"y":0.5,"z":0}]},{"name":"Иридий","formula":"Ir","aliases":[],"type":"metallic","system":"cubic","family":"ГЦК","a":3.839,"b":3.839,"c":3.839,"al":90,"be":90,"ga":90,"z":4,"coord":12,"desc":"Металлическая гранецентрированная кубическая решётка, КЧ 12.","atoms":[{"e":"Ir","x":0,"y":0,"z":0},{"e":"Ir","x":0,"y":0.5,"z":0.5},{"e":"Ir","x":0.5,"y":0,"z":0.5},{"e":"Ir","x":0.5,"y":0.5,"z":0}]},{"name":"Кальций","formula":"Ca","aliases":[],"type":"metallic","system":"cubic","family":"ГЦК","a":5.588,"b":5.588,"c":5.588,"al":90,"be":90,"ga":90,"z":4,"coord":12,"desc":"Металлическая гранецентрированная кубическая решётка, КЧ 12.","atoms":[{"e":"Ca","x":0,"y":0,"z":0},{"e":"Ca","x":0,"y":0.5,"z":0.5},{"e":"Ca","x":0.5,"y":0,"z":0.5},{"e":"Ca","x":0.5,"y":0.5,"z":0}]},{"name":"Стронций","formula":"Sr","aliases":[],"type":"metallic","system":"cubic","family":"ГЦК","a":6.085,"b":6.085,"c":6.085,"al":90,"be":90,"ga":90,"z":4,"coord":12,"desc":"Металлическая гранецентрированная кубическая решётка, КЧ 12.","atoms":[{"e":"Sr","x":0,"y":0,"z":0},{"e":"Sr","x":0,"y":0.5,"z":0.5},{"e":"Sr","x":0.5,"y":0,"z":0.5},{"e":"Sr","x":0.5,"y":0.5,"z":0}]},{"name":"Железо","formula":"Fe","aliases":[],"type":"metallic","system":"cubic","family":"ОЦК","a":2.866,"b":2.866,"c":2.866,"al":90,"be":90,"ga":90,"z":2,"coord":8,"desc":"Металлическая объёмноцентрированная кубическая решётка, КЧ 8.","atoms":[{"e":"Fe","x":0,"y":0,"z":0},{"e":"Fe","x":0.5,"y":0.5,"z":0.5}]},{"name":"Вольфрам","formula":"W","aliases":[],"type":"metallic","system":"cubic","family":"ОЦК","a":3.165,"b":3.165,"c":3.165,"al":90,"be":90,"ga":90,"z":2,"coord":8,"desc":"Металлическая объёмноцентрированная кубическая решётка, КЧ 8.","atoms":[{"e":"W","x":0,"y":0,"z":0},{"e":"W","x":0.5,"y":0.5,"z":0.5}]},{"name":"Молибден","formula":"Mo","aliases":[],"type":"metallic","system":"cubic","family":"ОЦК","a":3.147,"b":3.147,"c":3.147,"al":90,"be":90,"ga":90,"z":2,"coord":8,"desc":"Металлическая объёмноцентрированная кубическая решётка, КЧ 8.","atoms":[{"e":"Mo","x":0,"y":0,"z":0},{"e":"Mo","x":0.5,"y":0.5,"z":0.5}]},{"name":"Хром","formula":"Cr","aliases":[],"type":"metallic","system":"cubic","family":"ОЦК","a":2.884,"b":2.884,"c":2.884,"al":90,"be":90,"ga":90,"z":2,"coord":8,"desc":"Металлическая объёмноцентрированная кубическая решётка, КЧ 8.","atoms":[{"e":"Cr","x":0,"y":0,"z":0},{"e":"Cr","x":0.5,"y":0.5,"z":0.5}]},{"name":"Ванадий","formula":"V","aliases":[],"type":"metallic","system":"cubic","family":"ОЦК","a":3.024,"b":3.024,"c":3.024,"al":90,"be":90,"ga":90,"z":2,"coord":8,"desc":"Металлическая объёмноцентрированная кубическая решётка, КЧ 8.","atoms":[{"e":"V","x":0,"y":0,"z":0},{"e":"V","x":0.5,"y":0.5,"z":0.5}]},{"name":"Ниобий","formula":"Nb","aliases":[],"type":"metallic","system":"cubic","family":"ОЦК","a":3.301,"b":3.301,"c":3.301,"al":90,"be":90,"ga":90,"z":2,"coord":8,"desc":"Металлическая объёмноцентрированная кубическая решётка, КЧ 8.","atoms":[{"e":"Nb","x":0,"y":0,"z":0},{"e":"Nb","x":0.5,"y":0.5,"z":0.5}]},{"name":"Тантал","formula":"Ta","aliases":[],"type":"metallic","system":"cubic","family":"ОЦК","a":3.306,"b":3.306,"c":3.306,"al":90,"be":90,"ga":90,"z":2,"coord":8,"desc":"Металлическая объёмноцентрированная кубическая решётка, КЧ 8.","atoms":[{"e":"Ta","x":0,"y":0,"z":0},{"e":"Ta","x":0.5,"y":0.5,"z":0.5}]},{"name":"Натрий","formula":"Na","aliases":[],"type":"metallic","system":"cubic","family":"ОЦК","a":4.291,"b":4.291,"c":4.291,"al":90,"be":90,"ga":90,"z":2,"coord":8,"desc":"Металлическая объёмноцентрированная кубическая решётка, КЧ 8.","atoms":[{"e":"Na","x":0,"y":0,"z":0},{"e":"Na","x":0.5,"y":0.5,"z":0.5}]},{"name":"Калий","formula":"K","aliases":[],"type":"metallic","system":"cubic","family":"ОЦК","a":5.328,"b":5.328,"c":5.328,"al":90,"be":90,"ga":90,"z":2,"coord":8,"desc":"Металлическая объёмноцентрированная кубическая решётка, КЧ 8.","atoms":[{"e":"K","x":0,"y":0,"z":0},{"e":"K","x":0.5,"y":0.5,"z":0.5}]},{"name":"Литий","formula":"Li","aliases":[],"type":"metallic","system":"cubic","family":"ОЦК","a":3.509,"b":3.509,"c":3.509,"al":90,"be":90,"ga":90,"z":2,"coord":8,"desc":"Металлическая объёмноцентрированная кубическая решётка, КЧ 8.","atoms":[{"e":"Li","x":0,"y":0,"z":0},{"e":"Li","x":0.5,"y":0.5,"z":0.5}]},{"name":"Барий","formula":"Ba","aliases":[],"type":"metallic","system":"cubic","family":"ОЦК","a":5.028,"b":5.028,"c":5.028,"al":90,"be":90,"ga":90,"z":2,"coord":8,"desc":"Металлическая объёмноцентрированная кубическая решётка, КЧ 8.","atoms":[{"e":"Ba","x":0,"y":0,"z":0},{"e":"Ba","x":0.5,"y":0.5,"z":0.5}]},{"name":"Магний","formula":"Mg","aliases":[],"type":"metallic","system":"hexagonal","family":"ГПУ","a":3.209,"b":3.209,"c":5.211,"al":90,"be":90,"ga":120,"z":2,"coord":12,"desc":"Металлическая гексагональная плотноупакованная решётка, КЧ 12.","atoms":[{"e":"Mg","x":0.3333333333333333,"y":0.6666666666666666,"z":0.25},{"e":"Mg","x":0.6666666666666666,"y":0.3333333333333333,"z":0.75}]},{"name":"Цинк","formula":"Zn","aliases":[],"type":"metallic","system":"hexagonal","family":"ГПУ","a":2.665,"b":2.665,"c":4.947,"al":90,"be":90,"ga":120,"z":2,"coord":12,"desc":"Металлическая гексагональная плотноупакованная решётка, КЧ 12.","atoms":[{"e":"Zn","x":0.3333333333333333,"y":0.6666666666666666,"z":0.25},{"e":"Zn","x":0.6666666666666666,"y":0.3333333333333333,"z":0.75}]},{"name":"Титан","formula":"Ti","aliases":[],"type":"metallic","system":"hexagonal","family":"ГПУ","a":2.951,"b":2.951,"c":4.684,"al":90,"be":90,"ga":120,"z":2,"coord":12,"desc":"Металлическая гексагональная плотноупакованная решётка, КЧ 12.","atoms":[{"e":"Ti","x":0.3333333333333333,"y":0.6666666666666666,"z":0.25},{"e":"Ti","x":0.6666666666666666,"y":0.3333333333333333,"z":0.75}]},{"name":"Кобальт","formula":"Co","aliases":[],"type":"metallic","system":"hexagonal","family":"ГПУ","a":2.507,"b":2.507,"c":4.069,"al":90,"be":90,"ga":120,"z":2,"coord":12,"desc":"Металлическая гексагональная плотноупакованная решётка, КЧ 12.","atoms":[{"e":"Co","x":0.3333333333333333,"y":0.6666666666666666,"z":0.25},{"e":"Co","x":0.6666666666666666,"y":0.3333333333333333,"z":0.75}]},{"name":"Кадмий","formula":"Cd","aliases":[],"type":"metallic","system":"hexagonal","family":"ГПУ","a":2.979,"b":2.979,"c":5.617,"al":90,"be":90,"ga":120,"z":2,"coord":12,"desc":"Металлическая гексагональная плотноупакованная решётка, КЧ 12.","atoms":[{"e":"Cd","x":0.3333333333333333,"y":0.6666666666666666,"z":0.25},{"e":"Cd","x":0.6666666666666666,"y":0.3333333333333333,"z":0.75}]},{"name":"Цирконий","formula":"Zr","aliases":[],"type":"metallic","system":"hexagonal","family":"ГПУ","a":3.232,"b":3.232,"c":5.147,"al":90,"be":90,"ga":120,"z":2,"coord":12,"desc":"Металлическая гексагональная плотноупакованная решётка, КЧ 12.","atoms":[{"e":"Zr","x":0.3333333333333333,"y":0.6666666666666666,"z":0.25},{"e":"Zr","x":0.6666666666666666,"y":0.3333333333333333,"z":0.75}]},{"name":"Скандий","formula":"Sc","aliases":[],"type":"metallic","system":"hexagonal","family":"ГПУ","a":3.309,"b":3.309,"c":5.273,"al":90,"be":90,"ga":120,"z":2,"coord":12,"desc":"Металлическая гексагональная плотноупакованная решётка, КЧ 12.","atoms":[{"e":"Sc","x":0.3333333333333333,"y":0.6666666666666666,"z":0.25},{"e":"Sc","x":0.6666666666666666,"y":0.3333333333333333,"z":0.75}]},{"name":"Иттрий","formula":"Y","aliases":[],"type":"metallic","system":"hexagonal","family":"ГПУ","a":3.647,"b":3.647,"c":5.731,"al":90,"be":90,"ga":120,"z":2,"coord":12,"desc":"Металлическая гексагональная плотноупакованная решётка, КЧ 12.","atoms":[{"e":"Y","x":0.3333333333333333,"y":0.6666666666666666,"z":0.25},{"e":"Y","x":0.6666666666666666,"y":0.3333333333333333,"z":0.75}]},{"name":"Гафний","formula":"Hf","aliases":[],"type":"metallic","system":"hexagonal","family":"ГПУ","a":3.196,"b":3.196,"c":5.051,"al":90,"be":90,"ga":120,"z":2,"coord":12,"desc":"Металлическая гексагональная плотноупакованная решётка, КЧ 12.","atoms":[{"e":"Hf","x":0.3333333333333333,"y":0.6666666666666666,"z":0.25},{"e":"Hf","x":0.6666666666666666,"y":0.3333333333333333,"z":0.75}]},{"name":"Рутений","formula":"Ru","aliases":[],"type":"metallic","system":"hexagonal","family":"ГПУ","a":2.706,"b":2.706,"c":4.282,"al":90,"be":90,"ga":120,"z":2,"coord":12,"desc":"Металлическая гексагональная плотноупакованная решётка, КЧ 12.","atoms":[{"e":"Ru","x":0.3333333333333333,"y":0.6666666666666666,"z":0.25},{"e":"Ru","x":0.6666666666666666,"y":0.3333333333333333,"z":0.75}]},{"name":"Лёд","formula":"H2O","aliases":["лёд","вода"],"type":"molecular","system":"hexagonal","family":"лёд","a":4.52,"b":4.52,"c":7.36,"al":90,"be":90,"ga":120,"z":4,"coord":4,"desc":"Молекулярная гексагональная решётка льда; показаны атомы кислорода.","atoms":[{"e":"O","x":0.3333333333333333,"y":0.6666666666666666,"z":0.0625},{"e":"O","x":0.6666666666666666,"y":0.3333333333333333,"z":0.5625},{"e":"O","x":0.6666666666666666,"y":0.3333333333333333,"z":0.9375},{"e":"O","x":0.3333333333333333,"y":0.6666666666666666,"z":0.4375}]},{"name":"Сухой лёд","formula":"CO2","aliases":["диоксид углерода","углекислый газ"],"type":"molecular","system":"cubic","family":"сухой лёд","a":5.62,"b":5.62,"c":5.62,"al":90,"be":90,"ga":90,"z":4,"coord":12,"desc":"Молекулярная кубическая решётка сухого льда: молекулы CO2 в узлах ГЦК.","atoms":[{"e":"C","x":0,"y":0,"z":0},{"e":"O","x":0.119,"y":0.119,"z":0.119},{"e":"O","x":-0.119,"y":-0.119,"z":-0.119},{"e":"C","x":0,"y":0.5,"z":0.5},{"e":"O","x":0.119,"y":0.619,"z":0.619},{"e":"O","x":-0.119,"y":0.381,"z":0.381},{"e":"C","x":0.5,"y":0,"z":0.5},{"e":"O","x":0.619,"y":0.119,"z":0.619},{"e":"O","x":0.381,"y":-0.119,"z":0.381},{"e":"C","x":0.5,"y":0.5,"z":0},{"e":"O","x":0.619,"y":0.619,"z":0.119},{"e":"O","x":0.381,"y":0.381,"z":-0.119}]}];
+
+  const ELEM = {
+    H:  { c: "#e8edf2", r: 0.30 }, Li: { c: "#c8a2ff", r: 0.45 }, Be: { c: "#c2ff00", r: 0.40 },
+    B:  { c: "#ffb5b5", r: 0.38 }, C:  { c: "#5b6572", r: 0.40 }, N:  { c: "#3050f8", r: 0.38 },
+    O:  { c: "#ff2d2d", r: 0.36 }, F:  { c: "#90e050", r: 0.34 }, Na: { c: "#ab5cf2", r: 0.50 },
+    Mg: { c: "#8aff00", r: 0.46 }, Al: { c: "#bfa6a6", r: 0.46 }, Si: { c: "#f0c8a0", r: 0.46 },
+    P:  { c: "#ff8000", r: 0.48 }, S:  { c: "#e6d600", r: 0.50 }, Cl: { c: "#1fd01f", r: 0.50 },
+    K:  { c: "#8f40d4", r: 0.55 }, Ca: { c: "#3dff00", r: 0.52 }, Sc: { c: "#e6e6e6", r: 0.50 },
+    Ti: { c: "#bfc2c7", r: 0.48 }, V:  { c: "#a6a6ab", r: 0.48 }, Cr: { c: "#8a99c7", r: 0.48 },
+    Mn: { c: "#9c7ac7", r: 0.47 }, Fe: { c: "#e06633", r: 0.47 }, Co: { c: "#f090a0", r: 0.46 },
+    Ni: { c: "#50d050", r: 0.46 }, Cu: { c: "#c88033", r: 0.46 }, Zn: { c: "#7d80b0", r: 0.47 },
+    Ga: { c: "#c28f8f", r: 0.48 }, Ge: { c: "#668f8f", r: 0.49 }, As: { c: "#bd80e3", r: 0.49 },
+    Se: { c: "#ffa100", r: 0.50 }, Br: { c: "#a62929", r: 0.53 }, Rb: { c: "#702eb0", r: 0.58 },
+    Sr: { c: "#00ff00", r: 0.55 }, Y:  { c: "#94ffff", r: 0.52 }, Zr: { c: "#94e0e0", r: 0.52 },
+    Nb: { c: "#73c2c9", r: 0.51 }, Mo: { c: "#54b5b5", r: 0.51 }, Ru: { c: "#248f8f", r: 0.50 },
+    Rh: { c: "#0a7d8c", r: 0.50 }, Pd: { c: "#006985", r: 0.50 }, Ag: { c: "#c0c0c0", r: 0.50 },
+    Cd: { c: "#ffd98f", r: 0.52 }, In: { c: "#a67573", r: 0.53 }, Sn: { c: "#668080", r: 0.53 },
+    Sb: { c: "#9e63b5", r: 0.53 }, Te: { c: "#d47a00", r: 0.55 }, I:  { c: "#940094", r: 0.58 },
+    Cs: { c: "#57178f", r: 0.62 }, Ba: { c: "#00c900", r: 0.58 }, La: { c: "#70d4ff", r: 0.55 },
+    Ce: { c: "#ffffc7", r: 0.55 }, Pr: { c: "#d9ffc7", r: 0.55 }, Tb: { c: "#30ffc7", r: 0.54 },
+    Hf: { c: "#4dc2ff", r: 0.52 }, Ta: { c: "#4da6ff", r: 0.51 }, W:  { c: "#2194d6", r: 0.51 },
+    Pt: { c: "#d0d0e0", r: 0.50 }, Au: { c: "#ffd123", r: 0.50 }, Hg: { c: "#b8b8d0", r: 0.52 },
+    Pb: { c: "#575961", r: 0.56 }, Th: { c: "#0080ff", r: 0.56 }, U:  { c: "#008fff", r: 0.55 },
+    Np: { c: "#0080ff", r: 0.55 }, Pu: { c: "#0080ff", r: 0.55 }, Eu: { c: "#00c9ff", r: 0.56 },
+    Sm: { c: "#00c9ff", r: 0.55 }, Yb: { c: "#00c9ff", r: 0.54 }
+  };
+
+  const TYPE_LABEL = {
+    ionic: "Ионная", covalent: "Ковалентная",
+    metallic: "Металлическая", molecular: "Молекулярная"
+  };
+  const SYSTEM_LABEL = {
+    cubic: "Кубическая", tetragonal: "Тетрагональная", hexagonal: "Гексагональная"
+  };
+
+  const QUICK = ["Хлорид натрия", "Алмаз", "Графит", "Фторид кальция", "Оксид цинка", "Медь", "Железо", "Лёд"];
+
+  /* ================================================================ */
+  /*  Утилиты                                                         */
+  /* ================================================================ */
+
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+  function fmt(v, d) {
+    return Number(v).toLocaleString("ru-RU", { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+  function fmtSmart(v) {
+    return Number(v).toLocaleString("ru-RU", { maximumFractionDigits: 3 });
+  }
+
+  function norm(s) {
+    return String(s).toLowerCase().replace(/ё/g, "е").replace(/[^a-zа-я0-9]/g, "");
+  }
+
+  function plural(n, one, few, many) {
+    const a = n % 10, b = n % 100;
+    if (a === 1 && b !== 11) return one;
+    if (a >= 2 && a <= 4 && (b < 10 || b >= 20)) return few;
+    return many;
+  }
+
+  function levenshtein(a, b) {
+    if (a === b) return 0;
+    const la = a.length, lb = b.length;
+    if (!la) return lb;
+    if (!lb) return la;
+    let prev = new Array(lb + 1);
+    for (let j = 0; j <= lb; j++) prev[j] = j;
+    for (let i = 1; i <= la; i++) {
+      const cur = [i];
+      for (let j = 1; j <= lb; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      }
+      prev = cur;
+    }
+    return prev[lb];
+  }
+
+  /* ================================================================ */
+  /*  Векторы и решётка                                               */
+  /* ================================================================ */
+
+  const rad = Math.PI / 180;
+
+  function makeLattice(a, b, c, al, be, ga) {
+    const ca = Math.cos(al * rad), cb = Math.cos(be * rad), cg = Math.cos(ga * rad), sg = Math.sin(ga * rad);
+    const A = [a, 0, 0];
+    const B = [b * cg, b * sg, 0];
+    const cx = c * cb;
+    const cy = c * (ca - cb * cg) / sg;
+    const cz = Math.sqrt(Math.max(0, c * c - cx * cx - cy * cy));
+    return [A, B, [cx, cy, cz]];
+  }
+
+  function toCart(fx, fy, fz, lat) {
+    return [
+      fx * lat[0][0] + fy * lat[1][0] + fz * lat[2][0],
+      fx * lat[0][1] + fy * lat[1][1] + fz * lat[2][1],
+      fx * lat[0][2] + fy * lat[1][2] + fz * lat[2][2]
+    ];
+  }
+
+  function vadd(a, b) { return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]; }
+  function vsub(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; }
+  function vmul(a, k) { return [a[0] * k, a[1] * k, a[2] * k]; }
+  function vdot(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
+  function vcross(a, b) {
+    return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  }
+  function vlen(a) { return Math.sqrt(vdot(a, a)); }
+  function vnorm(a) { const l = vlen(a) || 1; return [a[0] / l, a[1] / l, a[2] / l]; }
+
+  function cellVolume(c) {
+    const lat = makeLattice(c.a, c.b, c.c, c.al, c.be, c.ga);
+    return Math.abs(vdot(lat[0], vcross(lat[1], lat[2])));
+  }
+
+  /* ================================================================ */
+  /*  Поиск                                                           */
+  /* ================================================================ */
+
+  CRYSTALS.forEach(function (c) {
+    c.keys = [c.name].concat(c.aliases || []).concat([c.formula]).map(norm);
+  });
+
+  function scoreOf(c, q) {
+    let best = 0;
+    for (let i = 0; i < c.keys.length; i++) {
+      const k = c.keys[i];
+      if (k === q) return 100;
+      if (k.indexOf(q) === 0) best = Math.max(best, 80 - (k.length - q.length));
+      else if (q.length >= 3 && k.indexOf(q) > 0) best = Math.max(best, 60 - k.indexOf(q));
+      else if (q.length >= 4) {
+        const d = levenshtein(k, q);
+        if (d <= 2) best = Math.max(best, 40 - d * 9);
+      }
+    }
+    return best;
+  }
+
+  function suggest(q, limit) {
+    const list = [];
+    CRYSTALS.forEach(function (c) {
+      const s = scoreOf(c, q);
+      if (s > 0) list.push({ c: c, s: s });
+    });
+    list.sort(function (a, b) { return b.s - a.s; });
+    return list.slice(0, limit).map(function (x) { return x.c; });
+  }
+
+  /* ================================================================ */
+  /*  DOM                                                             */
+  /* ================================================================ */
+
+  const input = document.getElementById("query");
+  const form = document.getElementById("searchForm");
+  const suggestBox = document.getElementById("suggest");
+  const quickBox = document.getElementById("quick");
+  const errorBox = document.getElementById("searchError");
+  const errText = document.getElementById("errText");
+  const errSugs = document.getElementById("errSugs");
+  const hintOverlay = document.getElementById("hintOverlay");
+
+  let sugList = [];
+  let hasDragged = false;
+
+  function hideSuggest() {
+    suggestBox.hidden = true;
+    sugList = [];
+  }
+
+  function choose(c) {
+    input.value = c.name;
+    hideSuggest();
+    errorBox.hidden = true;
+    select(c);
+  }
+
+  function showSuggest() {
+    const q = norm(input.value);
+    if (!q) { hideSuggest(); return; }
+    const list = suggest(q, 7);
+    if (!list.length) { hideSuggest(); return; }
+
+    sugList = list;
+    suggestBox.innerHTML = "";
+
+    list.forEach(function (c) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "sug";
+
+      const n = document.createElement("span");
+      n.className = "sug-name";
+      n.textContent = c.name;
+
+      const f = document.createElement("span");
+      f.className = "sug-formula";
+      f.textContent = c.formula;
+
+      b.appendChild(n);
+      b.appendChild(f);
+      b.addEventListener("mousedown", function (e) { e.preventDefault(); });
+      b.addEventListener("click", function () { choose(c); });
+      suggestBox.appendChild(b);
+    });
+
+    suggestBox.hidden = false;
+  }
+
+  function showError(text, list) {
+    errText.textContent = text;
+    errSugs.innerHTML = "";
+    (list || []).forEach(function (c) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = c.name;
+      b.addEventListener("click", function () { choose(c); });
+      errSugs.appendChild(b);
+    });
+    errorBox.hidden = false;
+  }
+
+  function submitSearch() {
+    const q = norm(input.value);
+    if (!q) { input.focus(); return; }
+
+    let exact = null;
+    for (let i = 0; i < CRYSTALS.length; i++) {
+      if (CRYSTALS[i].keys.indexOf(q) !== -1) { exact = CRYSTALS[i]; break; }
+    }
+    if (exact) { choose(exact); return; }
+
+    const near = suggest(q, 3);
+    if (near.length) showError("Точного совпадения нет. Возможно, вы имели в виду:", near);
+    else showError("Не нашёл такое вещество. Попробуйте: хлорид натрия, алмаз, медь, флюорит.", []);
+  }
+
+  form.addEventListener("submit", function (e) { e.preventDefault(); submitSearch(); });
+  input.addEventListener("input", function () { errorBox.hidden = true; showSuggest(); });
+  input.addEventListener("focus", showSuggest);
+  input.addEventListener("blur", function () { setTimeout(hideSuggest, 130); });
+
+  input.addEventListener("keydown", function (e) {
+    if (suggestBox.hidden) return;
+    if (e.key === "Escape") { hideSuggest(); return; }
+    if (e.key === "Enter" && sugList.length) {
+      const q = norm(input.value);
+      const exact = sugList.filter(function (c) { return c.keys.indexOf(q) !== -1; })[0];
+      if (exact) { e.preventDefault(); choose(exact); }
+    }
+  });
+
+  /* ================================================================ */
+  /*  Состояние камеры                                                */
+  /* ================================================================ */
+
+  let rot = { x: 0, y: 0, z: 0, w: 1 };
+  let zoom = 1;
+  let autoRotate = true;
+  let showCell = true;
+  let showContacts = false;
+  let showAngles = false;
+  let showLabels = false;
+  let supercell = 1;
+  let planeOn = false;
+  let planeH = 1, planeK = 1, planeL = 1;
+  let current = null;
+  let model = null;
+  let appearStart = 0;
+  let dragging = false;
+  let lastPointer = { x: 0, y: 0 };
+
+  function qAxis(ax, ay, az, angle) {
+    const l = Math.hypot(ax, ay, az) || 1;
+    const s = Math.sin(angle / 2) / l;
+    return { x: ax * s, y: ay * s, z: az * s, w: Math.cos(angle / 2) };
+  }
+  function qMul(a, b) {
+    return {
+      w: a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
+      x: a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
+      y: a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
+      z: a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w
+    };
+  }
+  function qNorm(q) {
+    const l = Math.hypot(q.x, q.y, q.z, q.w) || 1;
+    return { x: q.x / l, y: q.y / l, z: q.z / l, w: q.w / l };
+  }
+  function qMatrix(q) {
+    const x = q.x, y = q.y, z = q.z, w = q.w;
+    return [
+      1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w),
+      2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w),
+      2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)
+    ];
+  }
+
+  /* ================================================================ */
+  /*  Построение модели                                               */
+  /* ================================================================ */
+
+  function buildModel() {
+    if (!current) return;
+
+    const N = supercell;
+    const lat = makeLattice(current.a, current.b, current.c, current.al, current.be, current.ga);
+    const center = toCart(N / 2, N / 2, N / 2, lat);
+
+    const raw = [];
+    const base = current.atoms;
+
+    function near0(v) { return Math.abs(v) < 1e-6; }
+
+    for (let i = 0; i < N; i++) {
+      for (let j = 0; j < N; j++) {
+        for (let k = 0; k < N; k++) {
+          for (let n = 0; n < base.length; n++) {
+            const a = base[n];
+            raw.push({ e: a.e, p: toCart(a.x + i, a.y + j, a.z + k, lat) });
+          }
+        }
+      }
+    }
+
+    // достраиваем дальние грани, чтобы ячейка выглядела замкнутой
+    for (let n = 0; n < base.length; n++) {
+      const a = base[n];
+      const ox = near0(a.x) ? [0, N] : [0];
+      const oy = near0(a.y) ? [0, N] : [0];
+      const oz = near0(a.z) ? [0, N] : [0];
+      for (let xi = 0; xi < ox.length; xi++) {
+        for (let yi = 0; yi < oy.length; yi++) {
+          for (let zi = 0; zi < oz.length; zi++) {
+            if (ox[xi] === 0 && oy[yi] === 0 && oz[zi] === 0) continue;
+            raw.push({ e: a.e, p: toCart(a.x + ox[xi], a.y + oy[yi], a.z + oz[zi], lat) });
+          }
+        }
+      }
+    }
+
+    const atoms = raw.map(function (a) {
+      const p = vsub(a.p, center);
+      const info = ELEM[a.e] || { c: "#94a3b8", r: 0.4 };
+      return { e: a.e, p: p, r: info.r, color: info.c };
+    });
+
+    let radius = 0;
+    atoms.forEach(function (a) {
+      radius = Math.max(radius, vlen(a.p) + a.r);
+    });
+
+    const contacts = [];
+    if (current.type !== "metallic") {
+      let minDist = Infinity;
+      for (let i = 0; i < atoms.length; i++) {
+        for (let j = i + 1; j < atoms.length; j++) {
+          const d = vlen(vsub(atoms[i].p, atoms[j].p));
+          if (d > 1e-6 && d < minDist) minDist = d;
+        }
+      }
+      if (isFinite(minDist)) {
+        const cut = minDist * 1.18;
+        for (let i = 0; i < atoms.length; i++) {
+          for (let j = i + 1; j < atoms.length; j++) {
+            if (vlen(vsub(atoms[i].p, atoms[j].p)) <= cut) contacts.push([i, j]);
+          }
+        }
+      }
+    }
+
+    let plane = null;
+    if (planeOn && (planeH + planeK + planeL) > 0) {
+      plane = buildPlane(current, N, planeH, planeK, planeL, lat, center);
+    }
+
+    model = {
+      lat: lat, atoms: atoms, radius: radius || 1,
+      contacts: contacts, plane: plane,
+      N: N, center: center
+    };
+  }
+
+  function buildPlane(c, N, h, k, l, lat, center) {
+    const c0 = (h + k + l) * N / 2;
+    const f = function (p) { return h * p[0] + k * p[1] + l * p[2] - c0; };
+
+    const corners = [];
+    for (let x = 0; x <= 1; x++) {
+      for (let y = 0; y <= 1; y++) {
+        for (let z = 0; z <= 1; z++) corners.push([x * N, y * N, z * N]);
+      }
+    }
+
+    const pts = [];
+    for (let i = 0; i < 8; i++) {
+      for (let j = i + 1; j < 8; j++) {
+        const a = corners[i], b = corners[j];
+        let diff = 0;
+        for (let d = 0; d < 3; d++) if (a[d] !== b[d]) diff++;
+        if (diff !== 1) continue;
+
+        const fa = f(a), fb = f(b);
+        if ((fa < 0 && fb < 0) || (fa > 0 && fb > 0)) continue;
+        if (Math.abs(fa - fb) < 1e-9) continue;
+
+        const t = fa / (fa - fb);
+        if (t < -1e-9 || t > 1 + 1e-9) continue;
+        const p = [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1]), a[2] + t * (b[2] - a[2])];
+
+        let dup = false;
+        for (let m = 0; m < pts.length; m++) {
+          if (Math.abs(pts[m][0] - p[0]) < 1e-6 && Math.abs(pts[m][1] - p[1]) < 1e-6 && Math.abs(pts[m][2] - p[2]) < 1e-6) { dup = true; break; }
+        }
+        if (!dup) pts.push(p);
+      }
+    }
+
+    if (pts.length < 3) return null;
+
+    const cart = pts.map(function (p) { return vsub(toCart(p[0], p[1], p[2], lat), center); });
+
+    const A = lat[0], B = lat[1], C = lat[2];
+    const V = vdot(A, vcross(B, C));
+    const Astar = vmul(vcross(B, C), 1 / V);
+    const Bstar = vmul(vcross(C, A), 1 / V);
+    const Cstar = vmul(vcross(A, B), 1 / V);
+    const Nv = vadd(vadd(vmul(Astar, h), vmul(Bstar, k)), vmul(Cstar, l));
+    const d = 1 / (vlen(Nv) || 1);
+    const n = vnorm(Nv);
+
+    // сортируем вершины вокруг центра, иначе полигон рисуется «крест-накрест»
+    const cen = [0, 0, 0];
+    cart.forEach(function (p) { cen[0] += p[0]; cen[1] += p[1]; cen[2] += p[2]; });
+    cen[0] /= cart.length; cen[1] /= cart.length; cen[2] /= cart.length;
+
+    const helper = Math.abs(n[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
+    const u = vnorm(vcross(n, helper));
+    const v = vnorm(vcross(n, u));
+
+    cart.sort(function (p, q) {
+      const pp = vsub(p, cen), qq = vsub(q, cen);
+      return Math.atan2(vdot(pp, v), vdot(pp, u)) - Math.atan2(vdot(qq, v), vdot(qq, u));
+    });
+
+    return { pts: cart, normal: n, d: d };
+  }
+
+  /* ================================================================ */
+  /*  Сцена                                                           */
+  /* ================================================================ */
+
+  const canvas = document.getElementById("scene");
+  const ctx = canvas ? canvas.getContext("2d") : null;
+
+  let W = 0, H = 0, dpr = 1;
+  let lastTs = 0;
+
+  function resize() {
+    if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    W = Math.max(240, Math.round(rect.width));
+    H = Math.max(260, Math.round(rect.height));
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+  }
+
+  function project(p, m, f, D, cx, cy) {
+    const x = m[0] * p[0] + m[1] * p[1] + m[2] * p[2];
+    const y = m[3] * p[0] + m[4] * p[1] + m[5] * p[2];
+    const z = m[6] * p[0] + m[7] * p[1] + m[8] * p[2];
+    const s = f / (D - z);
+    return { x: cx + x * s, y: cy - y * s, z: z, s: s };
+  }
+
+  function shade(hex, k) {
+    const n = parseInt(hex.slice(1), 16);
+    const r = Math.min(255, Math.max(0, ((n >> 16) & 255) * k));
+    const g = Math.min(255, Math.max(0, ((n >> 8) & 255) * k));
+    const b = Math.min(255, Math.max(0, (n & 255) * k));
+    return "rgb(" + (r | 0) + "," + (g | 0) + "," + (b | 0) + ")";
+  }
+
+  function mixWhite(hex, k) {
+    const n = parseInt(hex.slice(1), 16);
+    const r = ((n >> 16) & 255) * (1 - k) + 255 * k;
+    const g = ((n >> 8) & 255) * (1 - k) + 255 * k;
+    const b = (n & 255) * (1 - k) + 255 * k;
+    return "rgb(" + (r | 0) + "," + (g | 0) + "," + (b | 0) + ")";
+  }
+
+  function drawLabel(x, y, text, color, size) {
+    ctx.font = "700 " + (size || 12) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(5,16,26,.85)";
+    ctx.strokeText(text, x, y);
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+  }
+
+  function draw() {
+    if (!ctx || !model) return;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    const m = qMatrix(rot);
+    const R = model.radius;
+    const D = R * 4.4;
+    const cx = W / 2, cy = H / 2;
+
+    const t = Math.min(1, (performance.now() - appearStart) / 300);
+    const ease = 1 - Math.pow(1 - t, 3);
+    const f = 0.36 * Math.min(W, H) * zoom * (0.9 + 0.1 * ease) * D / R;
+
+    const atoms = model.atoms.map(function (a) {
+      const p = project(a.p, m, f, D, cx, cy);
+      return { e: a.e, color: a.color, r: a.r * p.s, x: p.x, y: p.y, z: p.z, s: p.s };
+    });
+
+    // плоскость (заливка)
+    let planePts = null;
+    if (model.plane) {
+      planePts = model.plane.pts.map(function (p) { return project(p, m, f, D, cx, cy); });
+      ctx.beginPath();
+      for (let i = 0; i < planePts.length; i++) {
+        if (i === 0) ctx.moveTo(planePts[i].x, planePts[i].y);
+        else ctx.lineTo(planePts[i].x, planePts[i].y);
+      }
+      ctx.closePath();
+      ctx.fillStyle = "rgba(45,190,170,.16)";
+      ctx.fill();
+    }
+
+    // контакты
+    if (showContacts) {
+      ctx.strokeStyle = "rgba(160,190,210,.35)";
+      ctx.lineWidth = 1.2;
+      for (let i = 0; i < model.contacts.length; i++) {
+        const a = atoms[model.contacts[i][0]];
+        const b = atoms[model.contacts[i][1]];
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+    }
+
+    // атомы
+    const order = atoms.map(function (_, i) { return i; });
+    order.sort(function (i, j) { return atoms[i].z - atoms[j].z; });
+
+    for (let k = 0; k < order.length; k++) {
+      const a = atoms[order[k]];
+      const depth = clamp((a.z + R) / (2 * R), 0, 1);
+      const kk = 0.72 + 0.28 * depth;
+      const base = shade(a.color, kk);
+
+      const g = ctx.createRadialGradient(
+        a.x - a.r * 0.38, a.y - a.r * 0.42, Math.max(1, a.r * 0.12),
+        a.x, a.y, a.r * 1.02
+      );
+      g.addColorStop(0, mixWhite(a.color, 0.55));
+      g.addColorStop(0.5, base);
+      g.addColorStop(1, shade(a.color, kk * 0.55));
+
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(0,0,0,.25)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      if (showLabels && a.r > 7) {
+        const light = a.color === "#e8edf2" || a.color === "#c0c0c0" || a.color === "#ffd123" || a.color === "#ffffc7";
+        ctx.font = "700 " + Math.max(8, Math.min(a.r * 1.05, a.r * 1.7 / a.e.length)) + 'px "Segoe UI", system-ui, sans-serif';
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = light ? "rgba(12,24,34,.85)" : "rgba(255,255,255,.95)";
+        ctx.fillText(a.e, a.x, a.y + a.r * 0.03);
+        ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
+      }
+    }
+
+    // ячейка и блок
+    if (showCell) {
+      drawCell(m, f, D, cx, cy, model.N);
+    }
+
+    // контур плоскости
+    if (planePts) {
+      ctx.save();
+      ctx.setLineDash([6, 5]);
+      ctx.strokeStyle = "rgba(90,225,200,.85)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let i = 0; i < planePts.length; i++) {
+        if (i === 0) ctx.moveTo(planePts[i].x, planePts[i].y);
+        else ctx.lineTo(planePts[i].x, planePts[i].y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // углы
+    if (showAngles) {
+      drawAngles(m, f, D, cx, cy);
+    }
+  }
+
+  function drawCell(m, f, D, cx, cy, N) {
+    const corners = [];
+    for (let x = 0; x <= 1; x++) {
+      for (let y = 0; y <= 1; y++) {
+        for (let z = 0; z <= 1; z++) {
+          corners.push(toCart(x, y, z, model.lat));
+        }
+      }
+    }
+
+    const edges = [];
+    for (let i = 0; i < 8; i++) {
+      for (let j = i + 1; j < 8; j++) {
+        const a = corners[i], b = corners[j];
+        let diff = 0;
+        for (let d = 0; d < 3; d++) if (Math.abs(a[d] - b[d]) > 1e-6) diff++;
+        if (diff === 1) edges.push([i, j]);
+      }
+    }
+
+    const c = [];
+    corners.forEach(function (p) {
+      const q = vsub(p, model.center);
+      c.push(project(q, m, f, D, cx, cy));
+    });
+
+    ctx.strokeStyle = "rgba(120,220,205,.6)";
+    ctx.lineWidth = 1.4;
+    for (let i = 0; i < edges.length; i++) {
+      const a = c[edges[i][0]], b = c[edges[i][1]];
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
+
+    if (N > 1) {
+      ctx.save();
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = "rgba(120,220,205,.18)";
+      ctx.lineWidth = 1;
+      const big = [];
+      const bigF = [];
+      for (let x = 0; x <= 1; x++) {
+        for (let y = 0; y <= 1; y++) {
+          for (let z = 0; z <= 1; z++) {
+            bigF.push([x * N, y * N, z * N]);
+            big.push(project(vsub(toCart(x * N, y * N, z * N, model.lat), model.center), m, f, D, cx, cy));
+          }
+        }
+      }
+      for (let i = 0; i < 8; i++) {
+        for (let j = i + 1; j < 8; j++) {
+          let diff = 0;
+          for (let d = 0; d < 3; d++) if (Math.abs(bigF[i][d] - bigF[j][d]) > 1e-6) diff++;
+          if (diff !== 1) continue;
+          ctx.beginPath();
+          ctx.moveTo(big[i].x, big[i].y);
+          ctx.lineTo(big[j].x, big[j].y);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+  }
+
+  function drawAngles(m, f, D, cx, cy) {
+    const A = model.lat[0], B = model.lat[1], C = model.lat[2];
+    const O = vsub([0, 0, 0], model.center);
+
+    const r = 0.28 * Math.min(vlen(A), vlen(B), vlen(C));
+
+    function arc(u, v, label) {
+      const uu = vnorm(u), vv = vnorm(v);
+      const ang = Math.acos(clamp(vdot(uu, vv), -1, 1));
+      const pts = [];
+      for (let i = 0; i <= 24; i++) {
+        const t = ang * i / 24;
+        const p = vadd(O, vadd(vmul(uu, r * Math.cos(t)), vmul(vv, r * Math.sin(t))));
+        pts.push(project(p, m, f, D, cx, cy));
+      }
+
+      ctx.strokeStyle = "rgba(255,210,120,.7)";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      for (let i = 0; i < pts.length; i++) {
+        if (i === 0) ctx.moveTo(pts[i].x, pts[i].y);
+        else ctx.lineTo(pts[i].x, pts[i].y);
+      }
+      ctx.stroke();
+
+      const mid = ang / 2;
+      const lp = vadd(O, vadd(vmul(uu, r * 1.28 * Math.cos(mid)), vmul(vv, r * 1.28 * Math.sin(mid))));
+      const pp = project(lp, m, f, D, cx, cy);
+      drawLabel(pp.x, pp.y, label, "rgba(255,220,150,.95)", 12);
+    }
+
+    arc(B, C, "α");
+    arc(A, C, "β");
+    arc(A, B, "γ");
+  }
+
+  function frame(ts) {
+    if (!ctx) return;
+    const dt = lastTs ? Math.min(0.05, (ts - lastTs) / 1000) : 0.016;
+    lastTs = ts;
+
+    if (autoRotate && !dragging) {
+      rot = qNorm(qMul(qAxis(0.12, 1, 0, 0.3 * dt), rot));
+    }
+
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  /* ================================================================ */
+  /*  Интерфейс                                                       */
+  /* ================================================================ */
+
+  const cellGrid = document.getElementById("cellGrid");
+  const facts = document.getElementById("facts");
+  const composition = document.getElementById("composition");
+  const planeD = document.getElementById("planeD");
+  const btnPlane = document.getElementById("btnPlane");
+  const hIdx = document.getElementById("hIdx");
+  const kIdx = document.getElementById("kIdx");
+  const lIdx = document.getElementById("lIdx");
+
+  function updateInfo() {
+    const c = current;
+    if (!c) return;
+
+    document.getElementById("crystalName").textContent = c.name;
+    document.getElementById("crystalFormula").textContent = c.formula;
+    document.getElementById("crystalType").textContent = TYPE_LABEL[c.type] + " решётка";
+    document.getElementById("crystalDesc").textContent = c.desc;
+    document.getElementById("cellBadge").textContent = "Z = " + c.z;
+
+    const V = cellVolume(c);
+
+    cellGrid.innerHTML = "";
+    [["a", c.a, "Å"], ["b", c.b, "Å"], ["c", c.c, "Å"],
+     ["α", c.al, "°"], ["β", c.be, "°"], ["γ", c.ga, "°"]].forEach(function (row) {
+      const k = document.createElement("span");
+      k.textContent = row[0];
+      const v = document.createElement("b");
+      v.textContent = fmtSmart(row[1]) + " " + row[2];
+      cellGrid.appendChild(k);
+      cellGrid.appendChild(v);
+    });
+    const vk = document.createElement("span");
+    vk.textContent = "V";
+    const vv = document.createElement("b");
+    vv.textContent = fmtSmart(V) + " Å³";
+    cellGrid.appendChild(vk);
+    cellGrid.appendChild(vv);
+
+    facts.innerHTML = "";
+    [
+      ["Сингония", SYSTEM_LABEL[c.system]],
+      ["Семейство", c.family],
+      ["Тип", TYPE_LABEL[c.type] + " решётка"],
+      ["Координация", String(c.coord)],
+      ["Атомов в ячейке", String(c.atoms.length)]
+    ].forEach(function (row) {
+      const d = document.createElement("div");
+      d.className = "fact";
+      const a = document.createElement("span");
+      a.textContent = row[0];
+      const b = document.createElement("b");
+      b.textContent = row[1];
+      d.appendChild(a);
+      d.appendChild(b);
+      facts.appendChild(d);
+    });
+
+    const counts = {};
+    c.atoms.forEach(function (a) { counts[a.e] = (counts[a.e] || 0) + 1; });
+    composition.innerHTML = "";
+    Object.keys(counts).sort().forEach(function (e) {
+      const chip = document.createElement("span");
+      chip.className = "el";
+      const dot = document.createElement("i");
+      dot.style.background = (ELEM[e] || { c: "#94a3b8" }).c;
+      const label = document.createElement("span");
+      label.textContent = e + " · ";
+      const n = document.createElement("b");
+      n.textContent = String(counts[e]);
+      chip.appendChild(dot);
+      chip.appendChild(label);
+      chip.appendChild(n);
+      composition.appendChild(chip);
+    });
+
+    updatePlaneText();
+  }
+
+  function updatePlaneText() {
+    if (!model || !model.plane) {
+      planeD.textContent = "d = —";
+      return;
+    }
+    planeD.textContent = "d(" + planeH + planeK + planeL + ") = " + fmt(model.plane.d, 3) + " Å";
+  }
+
+  function select(c) {
+    current = c;
+    buildModel();
+    resetView();
+    updateInfo();
+    appearStart = performance.now();
+    if (!hasDragged) hintOverlay.classList.remove("gone");
+  }
+
+  function resetView() {
+    rot = qNorm(qMul(qAxis(0, 1, 0, -0.42), qAxis(1, 0, 0, 0.18)));
+    zoom = 1;
+  }
+
+  function rebuild() {
+    buildModel();
+    updatePlaneText();
+    appearStart = performance.now();
+  }
+
+  /* ---------- кнопки-переключатели ---------- */
+
+  document.getElementById("btnCell").addEventListener("click", function () {
+    showCell = !showCell;
+    this.classList.toggle("active", showCell);
+  });
+
+  document.getElementById("btnContacts").addEventListener("click", function () {
+    showContacts = !showContacts;
+    this.classList.toggle("active", showContacts);
+  });
+
+  document.getElementById("btnAngles").addEventListener("click", function () {
+    showAngles = !showAngles;
+    this.classList.toggle("active", showAngles);
+  });
+
+  document.getElementById("btnLabels").addEventListener("click", function () {
+    showLabels = !showLabels;
+    this.classList.toggle("active", showLabels);
+  });
+
+  document.getElementById("btnReset").addEventListener("click", resetView);
+
+  document.getElementById("btnZoomIn").addEventListener("click", function () {
+    zoom = clamp(zoom * 1.15, 0.55, 2.4);
+  });
+  document.getElementById("btnZoomOut").addEventListener("click", function () {
+    zoom = clamp(zoom / 1.15, 0.55, 2.4);
+  });
+
+  document.getElementById("supercell").addEventListener("click", function (e) {
+    const b = e.target.closest("button");
+    if (!b) return;
+    const n = Number(b.getAttribute("data-n"));
+    if (!n || n === supercell) return;
+    supercell = n;
+    Array.prototype.forEach.call(this.children, function (x) {
+      x.classList.toggle("active", Number(x.getAttribute("data-n")) === n);
+    });
+    rebuild();
+  });
+
+  [hIdx, kIdx, lIdx].forEach(function (input) {
+    input.addEventListener("input", function () {
+      planeH = clamp(parseInt(hIdx.value, 10) || 0, 0, 3);
+      planeK = clamp(parseInt(kIdx.value, 10) || 0, 0, 3);
+      planeL = clamp(parseInt(lIdx.value, 10) || 0, 0, 3);
+      if (planeOn) rebuild();
+    });
+  });
+
+  btnPlane.addEventListener("click", function () {
+    const sum = planeH + planeK + planeL;
+    if (sum === 0) {
+      planeH = 1;
+      hIdx.value = "1";
+    }
+    planeOn = !planeOn;
+    btnPlane.classList.toggle("active", planeOn);
+    btnPlane.textContent = planeOn ? "Скрыть плоскость" : "Показать плоскость";
+    rebuild();
+  });
+
+  /* ---------- мышь и тач ---------- */
+
+  canvas.addEventListener("wheel", function (e) {
+    e.preventDefault();
+    zoom = clamp(zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1), 0.55, 2.4);
+  }, { passive: false });
+
+  canvas.addEventListener("pointerdown", function (e) {
+    dragging = true;
+    lastPointer = { x: e.clientX, y: e.clientY };
+    if (canvas.setPointerCapture) canvas.setPointerCapture(e.pointerId);
+    if (!hasDragged) {
+      hasDragged = true;
+      hintOverlay.classList.add("gone");
+    }
+  });
+
+  canvas.addEventListener("pointermove", function (e) {
+    if (!dragging) return;
+    const dx = e.clientX - lastPointer.x;
+    const dy = e.clientY - lastPointer.y;
+    lastPointer = { x: e.clientX, y: e.clientY };
+    rot = qNorm(qMul(qAxis(0, 1, 0, dx * 0.0075), qMul(qAxis(1, 0, 0, dy * 0.0075), rot)));
+  });
+
+  function endDrag() { dragging = false; }
+  canvas.addEventListener("pointerup", endDrag);
+  canvas.addEventListener("pointercancel", endDrag);
+  canvas.addEventListener("pointerleave", endDrag);
+  canvas.addEventListener("dblclick", resetView);
+
+  /* ---------- каталог ---------- */
+
+  const modal = document.getElementById("catalogModal");
+  const catalogGrid = document.getElementById("catalogGrid");
+  const catalogCount = document.getElementById("catalogCount");
+  const typeFilters = document.getElementById("typeFilters");
+  const systemFilters = document.getElementById("systemFilters");
+  const openCatalogBtn = document.getElementById("openCatalog");
+  const closeCatalogBtn = document.getElementById("closeCatalog");
+
+  let activeType = "all";
+  let activeSystem = "all";
+  let lastFocus = null;
+
+  const TYPE_ORDER = [
+    ["all", "Все"],
+    ["ionic", "Ионные"],
+    ["covalent", "Ковалентные"],
+    ["metallic", "Металлические"],
+    ["molecular", "Молекулярные"]
+  ];
+  const SYSTEM_ORDER = [
+    ["all", "Все"],
+    ["cubic", "Кубическая"],
+    ["tetragonal", "Тетрагональная"],
+    ["hexagonal", "Гексагональная"]
+  ];
+
+  function counts(list, key) {
+    const out = {};
+    list.forEach(function (c) { out[c[key]] = (out[c[key]] || 0) + 1; });
+    return out;
+  }
+
+  function buildFilterRow(box, order, active, key, onPick) {
+    const cnt = counts(CRYSTALS, key);
+    box.innerHTML = "";
+    order.forEach(function (pair) {
+      const id = pair[0];
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "filter" + (id === active ? " active" : "");
+      b.textContent = pair[1];
+
+      const n = document.createElement("span");
+      n.textContent = String(id === "all" ? CRYSTALS.length : (cnt[id] || 0));
+      b.appendChild(n);
+
+      b.addEventListener("click", function () { onPick(id); });
+      box.appendChild(b);
+    });
+  }
+
+  function renderCatalog() {
+    const list = CRYSTALS.filter(function (c) {
+      return (activeType === "all" || c.type === activeType) &&
+             (activeSystem === "all" || c.system === activeSystem);
+    });
+
+    catalogCount.textContent = list.length + " " + plural(list.length, "вещество", "вещества", "веществ");
+    catalogGrid.innerHTML = "";
+
+    list.forEach(function (c) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "cat-card" + (current && current.name === c.name ? " is-current" : "");
+
+      const n = document.createElement("span");
+      n.className = "cat-name";
+      n.textContent = c.name;
+
+      const f = document.createElement("span");
+      f.className = "cat-formula";
+      f.textContent = c.formula;
+
+      b.appendChild(n);
+      b.appendChild(f);
+      b.addEventListener("click", function () {
+        choose(c);
+        closeCatalog(false);
+        const viewer = document.querySelector(".viewer-card");
+        if (viewer && viewer.scrollIntoView) viewer.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      catalogGrid.appendChild(b);
+    });
+  }
+
+  function buildFilters() {
+    buildFilterRow(typeFilters, TYPE_ORDER, activeType, "type", function (id) {
+      activeType = id;
+      buildFilters();
+      renderCatalog();
+    });
+    buildFilterRow(systemFilters, SYSTEM_ORDER, activeSystem, "system", function (id) {
+      activeSystem = id;
+      buildFilters();
+      renderCatalog();
+    });
+  }
+
+  function openCatalog() {
+    lastFocus = document.activeElement;
+    buildFilters();
+    renderCatalog();
+    modal.hidden = false;
+    if (document.body) document.body.style.overflow = "hidden";
+    closeCatalogBtn.focus();
+  }
+
+  function closeCatalog(restoreFocus) {
+    modal.hidden = true;
+    if (document.body) document.body.style.overflow = "";
+    if (restoreFocus !== false && lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+
+  openCatalogBtn.addEventListener("click", openCatalog);
+  closeCatalogBtn.addEventListener("click", function () { closeCatalog(); });
+
+  modal.addEventListener("click", function (e) {
+    const t = e.target;
+    if (t === modal || (t.classList && t.classList.contains("modal-backdrop"))) closeCatalog();
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !modal.hidden) closeCatalog();
+  });
+
+  /* ---------- быстрые кнопки ---------- */
+
+  QUICK.forEach(function (name) {
+    const c = CRYSTALS.filter(function (x) { return x.name === name; })[0];
+    if (!c) return;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = name;
+    b.addEventListener("click", function () { choose(c); });
+    quickBox.appendChild(b);
+  });
+
+  const randomBtn = document.createElement("button");
+  randomBtn.type = "button";
+  randomBtn.textContent = "🎲 случайная";
+  randomBtn.addEventListener("click", function () {
+    choose(CRYSTALS[Math.floor(Math.random() * CRYSTALS.length)]);
+  });
+  quickBox.appendChild(randomBtn);
+
+  document.getElementById("catalogBtnCount").textContent = String(CRYSTALS.length);
+
+  /* ---------- запуск ---------- */
+
+  window.addEventListener("resize", resize);
+  if (window.ResizeObserver) {
+    new window.ResizeObserver(resize).observe(canvas);
+  }
+
+  if (ctx) {
+    resize();
+    requestAnimationFrame(frame);
+  }
+
+  const initial = CRYSTALS.filter(function (c) { return c.name === "Хлорид натрия"; })[0] || CRYSTALS[0];
+  select(initial);
+  input.value = initial.name;
+})();
+</script>
+</body>
+</html>
